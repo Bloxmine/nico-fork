@@ -460,6 +460,8 @@ function createHandler() {
             <button id="modeCircle" type="button">⭕ Circle</button>
             <button id="modeSelect" type="button">⬚ Select</button>
           </span>
+          <button id="undo" title="Undo (Ctrl+Z)">↶ Undo</button>
+          <button id="redo" title="Redo (Ctrl+Y)">↷ Redo</button>
           <span class="range" id="brushSizeControl">
             <label for="brushSize">Size</label>
             <input id="brushSize" type="range" min="1" max="8" value="1" />
@@ -473,6 +475,10 @@ function createHandler() {
           <label id="fillToggle" style="display:none">
             <input id="fillShapes" type="checkbox" />
             Fill shapes
+          </label>
+          <label>
+            <input id="pixelPerfect" type="checkbox" />
+            Pixel Perfect
           </label>
           <select id="customBrushSel" style="min-width:140px;display:none">
             <option value="">Select custom brush...</option>
@@ -602,6 +608,9 @@ function createHandler() {
       const textSaveBtn = document.getElementById('textSave');
       const animSel = document.getElementById('animSel');
       const animNameInput = document.getElementById('animName');
+      const pixelPerfectEl = document.getElementById('pixelPerfect');
+      const undoBtn = document.getElementById('undo');
+      const redoBtn = document.getElementById('redo');
       let frames = [];
       let idx = 0;
       let playing = false;
@@ -623,14 +632,132 @@ function createHandler() {
       let shapeStart = null;
       let tempOverlay = null;
       let fillShapes = false;
+      let pixelPerfect = false;
+      let lastDrawnPixel = null; // For pixel perfect mode
+      let drawnPixelsThisStroke = new Set(); // Track pixels drawn in current stroke
+      
+      // Undo/Redo system
+      let undoStack = [];
+      let redoStack = [];
+      const MAX_UNDO_STATES = 50;
+      
+      function saveUndoState() {
+        // Save current frame state to undo stack
+        const currentFrame = frames[idx];
+        if (!currentFrame) return;
+        
+        undoStack.push({
+          frameIdx: idx,
+          arr: currentFrame.arr.slice() // Copy array
+        });
+        
+        // Limit stack size
+        if (undoStack.length > MAX_UNDO_STATES) {
+          undoStack.shift();
+        }
+        
+        // Clear redo stack when new action is performed
+        redoStack = [];
+        updateUndoRedoButtons();
+      }
+      
+      function undo() {
+        if (undoStack.length === 0) return;
+        
+        // Save current state to redo stack before undoing
+        const currentFrame = frames[idx];
+        if (currentFrame) {
+          redoStack.push({
+            frameIdx: idx,
+            arr: currentFrame.arr.slice()
+          });
+        }
+        
+        // Pop from undo stack and restore
+        const state = undoStack.pop();
+        idx = state.frameIdx;
+        frames[idx].arr = state.arr.slice();
+        
+        renderGrid();
+        renderTimeline();
+        updateUndoRedoButtons();
+      }
+      
+      function redo() {
+        if (redoStack.length === 0) return;
+        
+        // Save current state to undo stack before redoing
+        const currentFrame = frames[idx];
+        if (currentFrame) {
+          undoStack.push({
+            frameIdx: idx,
+            arr: currentFrame.arr.slice()
+          });
+        }
+        
+        // Pop from redo stack and restore
+        const state = redoStack.pop();
+        idx = state.frameIdx;
+        frames[idx].arr = state.arr.slice();
+        
+        renderGrid();
+        renderTimeline();
+        updateUndoRedoButtons();
+      }
+      
+      function updateUndoRedoButtons() {
+        if (undoBtn) undoBtn.disabled = undoStack.length === 0;
+        if (redoBtn) redoBtn.disabled = redoStack.length === 0;
+      }
+      
       function bitsOf(arr){ return arr.map(v=>v?'1':'0').join(''); }
       function arrOf(bits){ const arr = new Array(W*H).fill(false); for(let i=0;i<arr.length && i<bits.length;i++){ arr[i] = bits.charAt(i)==='1'; } return arr; }
-      function applyBrushAt(index){
+      
+      // Apply brush with pixel perfect algorithm (like Aseprite)
+      function applyBrushAt(index, forceApply = false){
         if (brushMode === 'select') return; // Don't paint in select mode
         const arr = frames[idx]?.arr || new Array(W*H).fill(false);
         const cx = index % W;
         const cy = Math.floor(index / W);
         
+        // Pixel perfect mode: skip if we've already drawn at this position in this stroke
+        if (pixelPerfect && !forceApply) {
+          const key = cx + ',' + cy;
+          if (drawnPixelsThisStroke.has(key)) {
+            return;
+          }
+          
+          // If we have a last pixel, draw a line between them to avoid gaps
+          if (lastDrawnPixel !== null) {
+            const dx = Math.abs(cx - lastDrawnPixel.x);
+            const dy = Math.abs(cy - lastDrawnPixel.y);
+            
+            // Only connect if the distance is more than 1 pixel (to fill gaps)
+            if (dx > 1 || dy > 1) {
+              // Draw line between last and current pixel
+              const steps = Math.max(dx, dy);
+              for (let i = 1; i < steps; i++) {
+                const t = i / steps;
+                const ix = Math.round(lastDrawnPixel.x + (cx - lastDrawnPixel.x) * t);
+                const iy = Math.round(lastDrawnPixel.y + (cy - lastDrawnPixel.y) * t);
+                const ikey = ix + ',' + iy;
+                if (!drawnPixelsThisStroke.has(ikey)) {
+                  applyBrushAtPosition(ix, iy, arr);
+                  drawnPixelsThisStroke.add(ikey);
+                }
+              }
+            }
+          }
+          
+          drawnPixelsThisStroke.add(key);
+          lastDrawnPixel = { x: cx, y: cy };
+        }
+        
+        applyBrushAtPosition(cx, cy, arr);
+      }
+      
+      // Helper function to actually apply the brush at a position
+      function applyBrushAtPosition(cx, cy, arr) {
         if (brushShape === 'custom' && currentCustomBrush) {
           const b = customBrushes[currentCustomBrush];
           if (!b) return;
@@ -870,6 +997,11 @@ function createHandler() {
         overlay.onmousedown = (e) => {
           e.preventDefault();
           isMouseDown = true;
+          
+          // Reset pixel perfect tracking for new stroke
+          drawnPixelsThisStroke.clear();
+          lastDrawnPixel = null;
+          
           const i = getCellFromPosition(e.clientX, e.clientY);
           if (i < 0) return;
           const x = i % W;
@@ -886,6 +1018,7 @@ function createHandler() {
                 selection.dragOffsetX = x - minX;
                 selection.dragOffsetY = y - minY;
                 selection.dragging = true;
+                saveUndoState(); // Save before starting to drag/move
                 return;
               }
             }
@@ -898,12 +1031,16 @@ function createHandler() {
             selection.dragging = false;
             createSelectionBox();
           } else if (brushMode === 'fill') {
+            saveUndoState(); // Save before fill
             floodFill(x, y);
           } else if (brushMode === 'line') {
+            saveUndoState(); // Save before starting line
             lineStart = { x, y };
           } else if (brushMode === 'rect' || brushMode === 'circle') {
+            saveUndoState(); // Save before starting shape
             shapeStart = { x, y };
           } else {
+            saveUndoState(); // Save before paint/erase stroke
             applyBrushAt(i);
           }
         };
@@ -917,22 +1054,21 @@ function createHandler() {
           
           if (brushMode === 'select') {
             if (selection.dragging && selection.copied) {
-              // Store original frame state on first drag
-              if (!tempOverlay) {
-                storeTempOverlay();
-              }
-              
-              // Clear to original state
-              clearTempOverlay();
-              
               // Calculate new position
               const newMinX = x - selection.dragOffsetX;
               const newMinY = y - selection.dragOffsetY;
               const w = selection.copied.w;
               const h = selection.copied.h;
               
-              // Draw preview at new position
+              // Clear entire canvas to blank
               const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+              for (let i = 0; i < arr.length; i++) {
+                arr[i] = false;
+                const el = grid.children[i];
+                if (el) el.classList.toggle('on', false);
+              }
+              
+              // Draw selection at new position
               for (let py = 0; py < h; py++) {
                 for (let px = 0; px < w; px++) {
                   const destX = newMinX + px;
@@ -1171,11 +1307,21 @@ function createHandler() {
             }
           }
           t.style.outline = i===idx ? '2px solid #0af' : '2px solid transparent';
-          t.onclick = ()=>{ idx=i; durEl.value = String(frames[idx].dur); renderTimeline(); renderGrid(); };
+          t.onclick = ()=>{ 
+            idx=i; 
+            durEl.value = String(frames[idx].dur); 
+            // Clear undo/redo stacks when switching frames
+            undoStack = [];
+            redoStack = [];
+            updateUndoRedoButtons();
+            renderTimeline(); 
+            renderGrid(); 
+          };
           tl.appendChild(t);
         });
       }
       async function loadState(name){ try{ const r = await fetch('/anim/state' + (name?('?name='+encodeURIComponent(name)):'') ); const j = await r.json(); if (j && Array.isArray(j.frames)) { if (j.w && j.h){ W=j.w; H=j.h; } frames = j.frames.map(fr=>({ dur: Number(fr.durationMs)||300, arr: arrOf(String(fr.bits||'')) })); if (!frames.length) frames=[{ dur:300, arr:new Array(W*H).fill(false) }]; idx = Math.min(idx, frames.length-1); durEl.value=String(frames[idx].dur); currentName = String(j.name||'') || currentName; textMeta = { enable: !!(j.text && j.text.enable), url: String((j.text && j.text.url) || ''), field: String((j.text && j.text.field) || ''), intervalMs: Math.max(1000, Number(j.text && j.text.intervalMs) || 30000) }; textUrlEl.value = textMeta.url; textFieldEl.value = textMeta.field; textIntEl.value = String(textMeta.intervalMs); textEnableEl.checked = !!textMeta.enable; } }catch{ frames=[{ dur:300, arr:new Array(W*H).fill(false) }]; idx=0; }
+        undoStack = []; redoStack = []; updateUndoRedoButtons();
         renderGrid(); renderTimeline(); }
       async function saveState(name){ const payload = { w: W, h: H, frames: frames.map(f=>({ bits: bitsOf(f.arr), durationMs: f.dur })), text: { enable: !!textEnableEl.checked, url: String(textUrlEl.value||'').trim(), field: String(textFieldEl.value||'').trim(), intervalMs: Math.max(1000, Number(textIntEl.value)||30000) } }; const q = name?('?name='+encodeURIComponent(name)) : ''; try{ await fetch('/anim/state'+q, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }); }catch{} }
       document.getElementById('addFrame').onclick = ()=>{ frames.splice(idx+1, 0, { dur: Number(durEl.value)||300, arr: new Array(W*H).fill(false) }); idx++; renderTimeline(); renderGrid(); };
@@ -1218,6 +1364,25 @@ function createHandler() {
       
       // Fill shapes toggle
       fillShapesEl.onchange = ()=>{ fillShapes = fillShapesEl.checked; };
+      pixelPerfectEl.onchange = ()=>{ pixelPerfect = pixelPerfectEl.checked; };
+      
+      // Undo/Redo buttons
+      undoBtn.onclick = ()=>{ undo(); };
+      redoBtn.onclick = ()=>{ redo(); };
+      
+      // Keyboard shortcuts for undo/redo
+      document.addEventListener('keydown', (e) => {
+        // Ctrl+Z or Cmd+Z for undo
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+          e.preventDefault();
+          undo();
+        }
+        // Ctrl+Y or Cmd+Y or Ctrl+Shift+Z for redo
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+          e.preventDefault();
+          redo();
+        }
+      });
       
       // Helper to update UI based on mode
       function updateModeUI() {
@@ -1341,23 +1506,22 @@ function createHandler() {
       
       // Move selection
       moveSelectionBtn.onclick = ()=>{ 
+        if (!selection.active) return;
+        
+        // First, copy the selection pattern
         copySelection();
-        // Clear the original area (cut, not copy)
-        if (selection.active) {
-          const arr = frames[idx]?.arr || new Array(W*H).fill(false);
-          const minX = Math.min(selection.startX, selection.endX);
-          const maxX = Math.max(selection.startX, selection.endX);
-          const minY = Math.min(selection.startY, selection.endY);
-          const maxY = Math.max(selection.startY, selection.endY);
-          for (let y = minY; y <= maxY; y++) {
-            for (let x = minX; x <= maxX; x++) {
-              const idx = y * W + x;
-              arr[idx] = false;
-              const el = grid.children[idx];
-              if (el) el.classList.toggle('on', false);
-            }
-          }
+        
+        // Store the current frame state before clearing (for undo if needed)
+        storeTempOverlay();
+        
+        // Clear the ENTIRE frame to blank
+        const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+        for (let i = 0; i < arr.length; i++) {
+          arr[i] = false;
+          const el = grid.children[i];
+          if (el) el.classList.toggle('on', false);
         }
+        
         selection.moving = true;
         moveSelectionBtn.textContent = selection.moving ? '✓ Moving' : '🔄 Move Mode';
       };
@@ -1532,7 +1696,12 @@ function createHandler() {
       document.getElementById('animSaveAs').onclick = async ()=>{ const name = String(animNameInput.value||'').trim(); if (!name) return; await saveState(name); await refreshAnimList(); animSel.value = name; };
       document.getElementById('animDelete').onclick = async ()=>{ const name = String(animSel.value||''); if (!name) return; try{ await fetch('/anim/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name }) }); }catch{} await refreshAnimList(); const next = String(animSel.value||''); await loadState(next); };
       document.getElementById('animSetActive').onclick = async ()=>{ const name = String(animSel.value||''); if (!name) return; try{ await fetch('/anim/select', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name }) }); }catch{} await refreshAnimList(); };
-      (async function init(){ await getLiveSize(); await refreshAnimList(); await loadState(); })();
+      (async function init(){ 
+        await getLiveSize(); 
+        await refreshAnimList(); 
+        await loadState(); 
+        updateUndoRedoButtons(); // Initialize button states
+      })();
       // Save on unload to persist quick edits
       window.addEventListener('beforeunload', ()=>{ try{ const n = String(animSel && animSel.value || ''); navigator.sendBeacon('/anim/state' + (n?('?name='+encodeURIComponent(n)):'') , new Blob([JSON.stringify({ w:W, h:H, frames: frames.map(f=>({ bits: bitsOf(f.arr), durationMs: f.dur })), text: { enable: !!textEnableEl.checked, url: String(textUrlEl.value||'').trim(), field: String(textFieldEl.value||'').trim(), intervalMs: Math.max(1000, Number(textIntEl.value)||30000) } })], { type:'application/json' })); }catch{} });
       // Onion skin UI
