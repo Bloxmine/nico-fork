@@ -454,6 +454,7 @@ function createHandler() {
           <span class="seg">
             <button id="modePaint" class="active" type="button">✏️ Paint</button>
             <button id="modeErase" type="button">🧹 Erase</button>
+            <button id="modeSpray" type="button">💨 Spray</button>
             <button id="modeFill" type="button">🪣 Fill</button>
             <button id="modeLine" type="button">📏 Line</button>
             <button id="modeRect" type="button">▭ Rectangle</button>
@@ -483,9 +484,13 @@ function createHandler() {
           <select id="customBrushSel" style="min-width:140px;display:none">
             <option value="">Select custom brush...</option>
           </select>
-          <button id="saveSelection" style="display:none;background:#f90;color:white;border:1px solid #e80">💾 Save Selection as Brush</button>
-          <button id="moveSelection" style="display:none;background:#09e;color:white;border:1px solid #07c">🔄 Move Mode</button>
-          <button id="clearSelectionBtn" style="display:none;background:#888;color:white;border:1px solid #666">✕ Clear Selection</button>
+          <button id="saveSelection" style="display:none;background:#f90;color:white;border:1px solid #e80">💾 Save as Brush</button>
+          <button id="moveSelection" style="display:none;background:#09e;color:white;border:1px solid #07c">🔄 Move</button>
+          <button id="copySelection" style="display:none;background:#0b5;color:white;border:1px solid #0a4">📋 Copy</button>
+          <button id="flipHSelection" style="display:none;background:#6c5ce7;color:white;border:1px solid #5b4dd6">↔️ Flip H</button>
+          <button id="flipVSelection" style="display:none;background:#6c5ce7;color:white;border:1px solid #5b4dd6">↕️ Flip V</button>
+          <button id="rotate90Selection" style="display:none;background:#a29bfe;color:white;border:1px solid #8b84eb">↻ Rotate 90°</button>
+          <button id="clearSelectionBtn" style="display:none;background:#888;color:white;border:1px solid #666">✕ Clear</button>
         </div>
 
         <!-- Canvas -->
@@ -578,6 +583,7 @@ function createHandler() {
       const brushSizeEl = document.getElementById('brushSize');
       const modePaintBtn = document.getElementById('modePaint');
       const modeEraseBtn = document.getElementById('modeErase');
+      const modeSprayBtn = document.getElementById('modeSpray');
       const modeFillBtn = document.getElementById('modeFill');
       const modeLineBtn = document.getElementById('modeLine');
       const modeRectBtn = document.getElementById('modeRect');
@@ -589,6 +595,10 @@ function createHandler() {
       const customBrushSel = document.getElementById('customBrushSel');
       const saveSelectionBtn = document.getElementById('saveSelection');
       const moveSelectionBtn = document.getElementById('moveSelection');
+      const copySelectionBtn = document.getElementById('copySelection');
+      const flipHSelectionBtn = document.getElementById('flipHSelection');
+      const flipVSelectionBtn = document.getElementById('flipVSelection');
+      const rotate90SelectionBtn = document.getElementById('rotate90Selection');
       const clearSelectionBtn = document.getElementById('clearSelectionBtn');
       const modeSelectBtn = document.getElementById('modeSelect');
       const fillToggle = document.getElementById('fillToggle');
@@ -617,7 +627,7 @@ function createHandler() {
       let playSpeed = 100; // percentage
       let isMouseDown = false;
       let brushSize = 1; // radius in pixels
-      let brushMode = 'paint'; // 'paint' | 'erase' | 'select' | 'fill' | 'line' | 'rect' | 'circle'
+      let brushMode = 'paint'; // 'paint' | 'erase' | 'spray' | 'select' | 'fill' | 'line' | 'rect' | 'circle'
       let brushShape = 'circle'; // 'circle' | 'square' | 'triangle' | 'custom'
       let currentName = '';
       let textMeta = { enable:false, url:'', field:'', intervalMs:30000 };
@@ -635,6 +645,8 @@ function createHandler() {
       let pixelPerfect = false;
       let lastDrawnPixel = null; // For pixel perfect mode
       let drawnPixelsThisStroke = new Set(); // Track pixels drawn in current stroke
+      let sprayTimer = null; // For spray tool continuous painting
+      let sprayDensity = 0.3; // Probability of painting each pixel in spray radius (0-1)
       
       // Undo/Redo system
       let undoStack = [];
@@ -803,6 +815,40 @@ function createHandler() {
             arr[pi] = (brushMode === 'paint');
             const el = grid.children[pi];
             if (el) el.classList.toggle('on', arr[pi]);
+          }
+        }
+      }
+      
+      // Apply spray at position (random scattered pixels)
+      function applySprayAt(index) {
+        const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+        const cx = index % W;
+        const cy = Math.floor(index / W);
+        
+        const r = Math.max(1, brushSize);
+        const sprayRadius = r * 2; // Spray has wider radius
+        
+        // Spray random pixels within radius
+        for (let dy = -sprayRadius; dy <= sprayRadius; dy++) {
+          for (let dx = -sprayRadius; dx <= sprayRadius; dx++) {
+            const nx = cx + dx;
+            const ny = cy + dy;
+            if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+            
+            // Check if within circular spray area
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist > sprayRadius) continue;
+            
+            // Random chance to paint this pixel (higher chance near center)
+            const centerFactor = 1 - (dist / sprayRadius);
+            const probability = sprayDensity * centerFactor;
+            
+            if (Math.random() < probability) {
+              const pi = ny * W + nx;
+              arr[pi] = true; // Spray always paints (doesn't erase)
+              const el = grid.children[pi];
+              if (el) el.classList.toggle('on', true);
+            }
           }
         }
       }
@@ -1033,6 +1079,14 @@ function createHandler() {
           } else if (brushMode === 'fill') {
             saveUndoState(); // Save before fill
             floodFill(x, y);
+          } else if (brushMode === 'spray') {
+            saveUndoState(); // Save before spray stroke
+            applySprayAt(i);
+            // Start continuous spray timer
+            sprayTimer = setInterval(() => {
+              const i = getCellFromPosition(e.clientX, e.clientY);
+              if (i >= 0) applySprayAt(i);
+            }, 50); // Spray every 50ms while held down
           } else if (brushMode === 'line') {
             saveUndoState(); // Save before starting line
             lineStart = { x, y };
@@ -1106,6 +1160,8 @@ function createHandler() {
             clearTempOverlay(); // Clear previous preview
             const radius = Math.round(Math.sqrt(Math.pow(x - shapeStart.x, 2) + Math.pow(y - shapeStart.y, 2)));
             drawCircle(shapeStart.x, shapeStart.y, radius, fillShapes, false); // Draw new preview
+          } else if (brushMode === 'spray') {
+            applySprayAt(i); // Apply spray on mouse move
           } else if (brushMode === 'paint' || brushMode === 'erase') {
             applyBrushAt(i);
           }
@@ -1166,6 +1222,10 @@ function createHandler() {
         }
         saveSelectionBtn.style.display = 'none';
         moveSelectionBtn.style.display = 'none';
+        copySelectionBtn.style.display = 'none';
+        flipHSelectionBtn.style.display = 'none';
+        flipVSelectionBtn.style.display = 'none';
+        rotate90SelectionBtn.style.display = 'none';
         clearSelectionBtn.style.display = 'none';
       }
       
@@ -1207,6 +1267,142 @@ function createHandler() {
             }
           }
         }
+      }
+      
+      function flipSelectionHorizontal() {
+        if (!selection.active) return;
+        saveUndoState();
+        const minX = Math.min(selection.startX, selection.endX);
+        const maxX = Math.max(selection.startX, selection.endX);
+        const minY = Math.min(selection.startY, selection.endY);
+        const maxY = Math.max(selection.startY, selection.endY);
+        const w = maxX - minX + 1;
+        const h = maxY - minY + 1;
+        const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+        
+        // Copy and flip the selection horizontally
+        const temp = [];
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const srcX = minX + x;
+            const srcY = minY + y;
+            temp[y * w + x] = arr[srcY * W + srcX];
+          }
+        }
+        
+        // Paste back flipped
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const destX = minX + (w - 1 - x); // Reverse x
+            const destY = minY + y;
+            const srcIdx = y * w + x;
+            const destIdx = destY * W + destX;
+            arr[destIdx] = temp[srcIdx];
+            const el = grid.children[destIdx];
+            if (el) el.classList.toggle('on', arr[destIdx]);
+          }
+        }
+      }
+      
+      function flipSelectionVertical() {
+        if (!selection.active) return;
+        saveUndoState();
+        const minX = Math.min(selection.startX, selection.endX);
+        const maxX = Math.max(selection.startX, selection.endX);
+        const minY = Math.min(selection.startY, selection.endY);
+        const maxY = Math.max(selection.startY, selection.endY);
+        const w = maxX - minX + 1;
+        const h = maxY - minY + 1;
+        const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+        
+        // Copy and flip the selection vertically
+        const temp = [];
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const srcX = minX + x;
+            const srcY = minY + y;
+            temp[y * w + x] = arr[srcY * W + srcX];
+          }
+        }
+        
+        // Paste back flipped
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const destX = minX + x;
+            const destY = minY + (h - 1 - y); // Reverse y
+            const srcIdx = y * w + x;
+            const destIdx = destY * W + destX;
+            arr[destIdx] = temp[srcIdx];
+            const el = grid.children[destIdx];
+            if (el) el.classList.toggle('on', arr[destIdx]);
+          }
+        }
+      }
+      
+      function rotateSelection90() {
+        if (!selection.active) return;
+        saveUndoState();
+        const minX = Math.min(selection.startX, selection.endX);
+        const maxX = Math.max(selection.startX, selection.endX);
+        const minY = Math.min(selection.startY, selection.endY);
+        const maxY = Math.max(selection.startY, selection.endY);
+        const w = maxX - minX + 1;
+        const h = maxY - minY + 1;
+        const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+        
+        // Copy the selection
+        const temp = [];
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const srcX = minX + x;
+            const srcY = minY + y;
+            temp[y * w + x] = arr[srcY * W + srcX];
+          }
+        }
+        
+        // Clear original area
+        for (let y = minY; y <= maxY; y++) {
+          for (let x = minX; x <= maxX; x++) {
+            const idx = y * W + x;
+            arr[idx] = false;
+            const el = grid.children[idx];
+            if (el) el.classList.toggle('on', false);
+          }
+        }
+        
+        // Rotate 90 degrees clockwise: new[x][y] = old[h-1-y][x]
+        // The rotated dimensions are swapped
+        const newW = h;
+        const newH = w;
+        
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const newX = minX + (h - 1 - y);
+            const newY = minY + x;
+            if (newX >= 0 && newY >= 0 && newX < W && newY < H) {
+              const srcIdx = y * w + x;
+              const destIdx = newY * W + newX;
+              arr[destIdx] = temp[srcIdx];
+              const el = grid.children[destIdx];
+              if (el) el.classList.toggle('on', arr[destIdx]);
+            }
+          }
+        }
+        
+        // Update selection bounds to new rotated size
+        selection.startX = minX;
+        selection.startY = minY;
+        selection.endX = minX + newW - 1;
+        selection.endY = minY + newH - 1;
+        updateSelectionBox();
+      }
+      
+      function duplicateSelection() {
+        if (!selection.active) return;
+        // Copy the selection and enter move mode
+        copySelection();
+        selection.moving = true;
+        moveSelectionBtn.textContent = selection.moving ? '✓ Moving' : '🔄 Move';
       }
       
       function clearTempOverlay() {
@@ -1387,7 +1583,7 @@ function createHandler() {
       // Helper to update UI based on mode
       function updateModeUI() {
         // Hide/show controls based on mode
-        const showBrushSize = ['paint', 'erase'].includes(brushMode);
+        const showBrushSize = ['paint', 'erase', 'spray'].includes(brushMode);
         const showBrushShape = ['paint', 'erase'].includes(brushMode);
         const showFillToggle = ['rect', 'circle'].includes(brushMode);
         
@@ -1402,49 +1598,56 @@ function createHandler() {
       modePaintBtn.onclick = ()=>{ 
         brushMode = 'paint'; 
         modePaintBtn.classList.add('active'); 
-        [modeEraseBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
+        [modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
         clearSelection();
         updateModeUI();
       };
       modeEraseBtn.onclick = ()=>{ 
         brushMode = 'erase'; 
         modeEraseBtn.classList.add('active'); 
-        [modePaintBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
+        [modePaintBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
+        clearSelection();
+        updateModeUI();
+      };
+      modeSprayBtn.onclick = ()=>{ 
+        brushMode = 'spray'; 
+        modeSprayBtn.classList.add('active'); 
+        [modePaintBtn, modeEraseBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
         clearSelection();
         updateModeUI();
       };
       modeFillBtn.onclick = ()=>{ 
         brushMode = 'fill'; 
         modeFillBtn.classList.add('active'); 
-        [modePaintBtn, modeEraseBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
+        [modePaintBtn, modeEraseBtn, modeSprayBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
         clearSelection();
         updateModeUI();
       };
       modeLineBtn.onclick = ()=>{ 
         brushMode = 'line'; 
         modeLineBtn.classList.add('active'); 
-        [modePaintBtn, modeEraseBtn, modeFillBtn, modeRectBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
+        [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeRectBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
         clearSelection();
         updateModeUI();
       };
       modeRectBtn.onclick = ()=>{ 
         brushMode = 'rect'; 
         modeRectBtn.classList.add('active'); 
-        [modePaintBtn, modeEraseBtn, modeFillBtn, modeLineBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
+        [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
         clearSelection();
         updateModeUI();
       };
       modeCircleBtn.onclick = ()=>{ 
         brushMode = 'circle'; 
         modeCircleBtn.classList.add('active'); 
-        [modePaintBtn, modeEraseBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
+        [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
         clearSelection();
         updateModeUI();
       };
       modeSelectBtn.onclick = ()=>{ 
         brushMode = 'select'; 
         modeSelectBtn.classList.add('active'); 
-        [modePaintBtn, modeEraseBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn].forEach(b => b.classList.remove('active'));
+        [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn].forEach(b => b.classList.remove('active'));
         updateModeUI();
       };
       
@@ -1504,6 +1707,18 @@ function createHandler() {
       // Save selection as brush
       saveSelectionBtn.onclick = ()=>{ saveSelectionAsBrush(); };
       
+      // Copy selection (duplicate and enter move mode)
+      copySelectionBtn.onclick = ()=>{ duplicateSelection(); };
+      
+      // Flip selection horizontally
+      flipHSelectionBtn.onclick = ()=>{ flipSelectionHorizontal(); };
+      
+      // Flip selection vertically
+      flipVSelectionBtn.onclick = ()=>{ flipSelectionVertical(); };
+      
+      // Rotate selection 90 degrees
+      rotate90SelectionBtn.onclick = ()=>{ rotateSelection90(); };
+      
       // Move selection
       moveSelectionBtn.onclick = ()=>{ 
         if (!selection.active) return;
@@ -1533,6 +1748,12 @@ function createHandler() {
       document.addEventListener('mouseup', (e)=>{ 
         if (!isMouseDown) return;
         isMouseDown = false; 
+        
+        // Stop spray timer if active
+        if (sprayTimer) {
+          clearInterval(sprayTimer);
+          sprayTimer = null;
+        }
         
         // Finalize line drawing
         if (brushMode === 'line' && lineStart) {
@@ -1583,6 +1804,10 @@ function createHandler() {
           // Selection complete - show buttons
           saveSelectionBtn.style.display = 'inline-block';
           moveSelectionBtn.style.display = 'inline-block';
+          copySelectionBtn.style.display = 'inline-block';
+          flipHSelectionBtn.style.display = 'inline-block';
+          flipVSelectionBtn.style.display = 'inline-block';
+          rotate90SelectionBtn.style.display = 'inline-block';
           clearSelectionBtn.style.display = 'inline-block';
         }
       });
