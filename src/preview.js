@@ -545,6 +545,7 @@ function createHandler() {
           <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">V</kbd> Select Tool</div>
           <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">T</kbd> Dither Tool</div>
           <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">K</kbd> Stamp Tool</div>
+          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">X</kbd> Text Tool</div>
           <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">M</kbd> Toggle Mirror</div>
           <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">[</kbd> Smaller Brush</div>
           <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">]</kbd> Larger Brush</div>
@@ -586,6 +587,7 @@ function createHandler() {
         <button id="modeSelect" class="w-full aspect-square text-2xl p-2 relative" title="Select (V)">⬚<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">V</span></button>
         <button id="modeDither" class="w-full aspect-square text-2xl p-2 relative" title="Dither Fill (T)">◧<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">T</span></button>
         <button id="modeStamp" class="w-full aspect-square text-2xl p-2 relative" title="Stamp/Clone (K)">🖌️<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">K</span></button>
+        <button id="modeText" class="w-full aspect-square text-2xl p-2 relative" title="Text (X)">🔤<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">X</span></button>
         <div class="border-t-2 border-black my-2"></div>
         <button id="undo" class="w-full aspect-square text-xl p-2" title="Undo (Ctrl+Z)">↶</button>
         <button id="redo" class="w-full aspect-square text-xl p-2" title="Redo (Ctrl+Y)">↷</button>
@@ -667,6 +669,11 @@ function createHandler() {
             <button id="clearStamp" class="btn-danger">✕ CLEAR</button>
             <span id="stampStatus" class="text-sm opacity-70"></span>
           </div>
+          <div id="textControls" style="display:none" class="flex flex-wrap gap-3 items-center mt-3 pt-3 border-t-2 border-black">
+            <span class="font-bold text-red-700">TEXT:</span>
+            <input id="textInput" type="text" placeholder="Type text..." class="flex-1 min-w-[200px] px-3 py-2 border-4 border-black font-bold" maxlength="50" />
+            <span class="text-sm opacity-70">Click on canvas to place text</span>
+          </div>
         </div>
 
         <!-- Canvas -->
@@ -734,6 +741,372 @@ function createHandler() {
     </div>
     
     <script>
+      const lettersBig = {
+      "A": [
+        [0,1,1,1,1],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+    ],
+    "B": [
+        [1,1,1,1,0],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+    ],
+    "C": [
+        [0,1,1,1,1],
+        [1,0,0,0,0],
+        [1,0,0,0,0],
+        [1,0,0,0,0],
+        [1,1,1,1,1],
+    ],
+    "D": [
+        [1,1,1,1,0],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+    ],
+    "E": [
+        [1,1,1,1,1],
+        [1,0,0,0,0],
+        [1,1,1,1,0],
+        [1,0,0,0,0],
+        [1,1,1,1,1],
+    ],
+    "F": [
+        [1,1,1,1,1],
+        [1,0,0,0,0],
+        [1,1,1,0,0],
+        [1,0,0,0,0],
+        [1,0,0,0,0],
+    ],
+    "G": [
+        [0,1,1,1,1],
+        [1,0,0,0,0],
+        [1,0,0,1,1],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+    ],
+    "H": [
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+    ],
+    "I": [
+        [1,1,1,1,1],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [1,1,1,1,1],
+    ],
+    "J": [
+        [0,0,0,0,1],
+        [0,0,0,0,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [0,1,1,1,1],
+    ],
+    "K": [
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,1,1,1,0],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+    ],
+    "L": [
+        [1,0,0,0,0],
+        [1,0,0,0,0],
+        [1,0,0,0,0],
+        [1,0,0,0,0],
+        [1,1,1,1,1],
+    ],
+    "M": [
+        [0,1,1,1,1],
+        [1,0,1,0,1],
+        [1,0,1,0,1],
+        [1,0,1,0,1],
+        [1,0,0,0,1],
+    ],
+    "N": [
+        [1,1,1,1,0],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+    ],
+    "O": [
+        [0,1,1,1,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,1,1,1,0],
+    ],
+    "P": [
+        [1,1,1,1,0],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+        [1,0,0,0,0],
+        [1,0,0,0,0],
+    ],
+    "Q": [
+        [1,1,1,1,1],
+        [1,0,0,0,1],
+        [1,0,1,0,1],
+        [1,0,0,1,0],
+        [1,1,1,0,1],
+    ],
+    "R": [
+        [1,1,1,1,0],
+        [1,0,0,0,1],
+        [1,1,1,1,0],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+    ],
+    "S": [
+        [0,1,1,1,1],
+        [1,0,0,0,0],
+        [1,1,1,1,1],
+        [0,0,0,0,1],
+        [1,1,1,1,0],
+    ],
+    "T": [
+        [1,1,1,1,1],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+    ],
+    "U": [
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,1,1,1,0],
+    ],
+    "V": [
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [0,1,0,1,0],
+        [0,0,1,0,0],
+    ],
+    "W": [
+        [1,0,0,0,1],
+        [1,0,1,0,1],
+        [1,0,1,0,1],
+        [1,0,1,0,1],
+        [1,1,1,1,0],
+    ],
+    "X": [
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [0,1,1,1,0],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+    ],
+    "Y": [
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+    ],
+    "Z": [
+        [1,1,1,1,1],
+        [0,0,0,0,1],
+        [0,1,1,1,0],
+        [1,0,0,0,0],
+        [1,1,1,1,1],
+    ],
+    "?": [
+        [1,1,1,1,1],
+        [0,0,0,0,1],
+        [0,0,1,1,1],
+        [0,0,0,0,0],
+        [0,0,1,0,0],
+    ],
+    "!": [
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,0,0,0],
+        [0,0,1,0,0],
+    ],
+    "(": [
+        [0,0,0,1,1],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,0,1,1],
+    ],
+    ")": [
+        [1,1,0,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [1,1,0,0,0],
+    ],
+    "[": [
+        [0,0,1,1,1],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,1,1],
+    ],
+    "]": [
+        [1,1,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [1,1,1,0,0],
+    ],
+    "{": [
+        [0,0,1,1,1],
+        [0,0,1,0,0],
+        [0,1,0,0,0],
+        [0,0,1,0,0],
+        [0,0,1,1,1],
+    ],
+    "}": [
+        [1,1,1,0,0],
+        [0,0,1,0,0],
+        [0,0,0,1,0],
+        [0,0,1,0,0],
+        [1,1,1,0,0],
+    ],
+    ",": [
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+        [1,0,0,0,0],
+        [1,0,0,0,0],
+    ],
+    ".": [
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+        [1,0,0,0,0],
+    ],
+    ":": [
+        [1,0,0,0,0],
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+        [1,0,0,0,0],
+    ],
+    ";": [
+        [1,0,0,0,0],
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+        [1,0,0,0,0],
+        [1,0,0,0,0],
+    ],
+    " ": [
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+    ],
+    "-": [
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+        [1,1,1,1,1],
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+    ],
+    "^": [
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [0,0,0,0,1],
+        [1,0,0,0,1],
+        [0,1,1,1,1],
+    ],
+    "~": [
+        [1,0,1,1,1],
+        [1,0,0,0,1],
+        [1,0,1,1,1],
+        [0,0,0,0,0],
+        [1,0,0,1,0],
+    ],
+        "0": [
+        [1,1,1,1,1],
+        [1,0,0,0,1],
+        [1,0,1,0,1],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+    ],
+    "1": [
+        [1,1,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [1,1,1,1,1],
+    ],
+    "2": [
+        [1,1,1,1,0],
+        [0,0,0,0,1],
+        [1,1,1,1,1],
+        [1,0,0,0,0],
+        [1,1,1,1,1],
+    ],
+    "3": [
+        [1,1,1,1,0],
+        [0,0,0,0,1],
+        [1,1,1,1,1],
+        [0,0,0,0,1],
+        [1,1,1,1,1],
+    ],
+    "4": [
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [0,1,1,1,1],
+        [0,0,0,0,1],
+        [0,0,0,0,1],
+    ],
+    "5": [
+        [1,1,1,1,1],
+        [1,0,0,0,0],
+        [1,1,1,1,1],
+        [0,0,0,0,1],
+        [1,1,1,1,0],
+    ],
+    "6": [
+        [1,1,1,1,0],
+        [1,0,0,0,0],
+        [1,1,1,1,1],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+    ],
+    "7": [
+        [1,1,1,1,1],
+        [0,0,0,0,1],
+        [0,0,0,1,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+    ],
+    "8": [
+        [1,1,1,1,0],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+        [1,0,0,0,1],
+        [0,1,1,1,1],
+    ],
+    "9": [
+        [1,1,1,1,0],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+        [0,0,0,0,1],
+        [1,1,1,1,1],
+    ]
+};
       let W = 84, H = 28;
       async function getLiveSize(){ try{ const r = await fetch('/frame.bits'); const j = await r.json(); if (j && j.w && j.h){ W=j.w; H=j.h; } }catch{} }
       const grid = document.getElementById('grid');
@@ -779,11 +1152,14 @@ function createHandler() {
       // New tool elements
       const modeDitherBtn = document.getElementById('modeDither');
       const modeStampBtn = document.getElementById('modeStamp');
+      const modeTextBtn = document.getElementById('modeText');
       const mirrorModeEl = document.getElementById('mirrorMode');
       const mirrorAxisEl = document.getElementById('mirrorAxis');
       const mirrorAxisControl = document.getElementById('mirrorAxisControl');
       const ditherControls = document.getElementById('ditherControls');
       const stampControls = document.getElementById('stampControls');
+      const textControls = document.getElementById('textControls');
+      const textInput = document.getElementById('textInput');
       const invertSelectionBtn = document.getElementById('invertSelection');
       const ditherCheckerboardBtn = document.getElementById('ditherCheckerboard');
       const ditherDotsBtn = document.getElementById('ditherDots');
@@ -808,7 +1184,7 @@ function createHandler() {
       let playSpeed = 100; // percentage
       let isMouseDown = false;
       let brushSize = 1; // radius in pixels
-      let brushMode = 'paint'; // 'paint' | 'erase' | 'spray' | 'select' | 'fill' | 'line' | 'rect' | 'circle' | 'dither' | 'stamp'
+      let brushMode = 'paint'; // 'paint' | 'erase' | 'spray' | 'select' | 'fill' | 'line' | 'rect' | 'circle' | 'dither' | 'stamp' | 'text'
       let brushShape = 'circle'; // 'circle' | 'square' | 'triangle' | 'custom'
       let currentName = '';
       let onionEnabled = false;
@@ -1322,6 +1698,58 @@ function createHandler() {
         }
       }
       
+      // Render text using lettersBig font
+      function renderText(text, startX, startY) {
+        console.log('renderText called with:', text, startX, startY);
+        if (!text || text.length === 0) return;
+        
+        const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+        saveUndoState();
+        
+        let cursorX = startX;
+        const spacing = 1; // Space between letters
+        
+        for (let i = 0; i < text.length; i++) {
+          const char = text[i].toUpperCase();
+          console.log('Processing character:', char);
+          
+          // Handle space character
+          if (char === ' ') {
+            cursorX += 3; // Space width
+            continue;
+          }
+          
+          const letterData = lettersBig[char];
+          console.log('Letter data for', char, ':', letterData);
+          if (!letterData) continue; // Skip unknown characters
+          
+          const letterHeight = letterData.length;
+          const letterWidth = letterData[0] ? letterData[0].length : 0;
+          console.log('Letter dimensions:', letterWidth, 'x', letterHeight);
+          
+          // Check if letter fits
+          if (cursorX + letterWidth > W) break;
+          
+          // Draw the letter
+          for (let ly = 0; ly < letterHeight; ly++) {
+            for (let lx = 0; lx < letterWidth; lx++) {
+              const y = startY + ly;
+              const x = cursorX + lx;
+              
+              if (x >= 0 && x < W && y >= 0 && y < H && letterData[ly][lx]) {
+                const idx = y * W + x;
+                arr[idx] = true;
+                const el = grid.children[idx];
+                if (el) el.classList.add('on');
+              }
+            }
+          }
+          
+          cursorX += letterWidth + spacing;
+        }
+        console.log('renderText complete');
+      }
+      
       function renderGrid(){
         console.log('renderGrid called - W:', W, 'H:', H, 'grid element:', grid);
         grid.style.gridTemplateColumns = 'repeat(' + W + ',12px)';
@@ -1407,6 +1835,15 @@ function createHandler() {
           } else if (brushMode === 'dither') {
             saveUndoState(); // Save before dither fill
             applyDitherFill(x, y);
+          } else if (brushMode === 'text') {
+            // Place text at clicked position
+            const text = textInput.value.trim();
+            console.log('Text mode clicked! Text:', text, 'Position:', x, y);
+            if (text) {
+              renderText(text, x, y);
+            } else {
+              console.log('No text entered');
+            }
           } else if (brushMode === 'stamp') {
             if (stampSource) {
               // If stamp source is set, place it
@@ -2251,6 +2688,14 @@ function createHandler() {
           modeStampBtn.click();
         }
         
+        // 'x' for Text tool
+        if (e.key === 'x' && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          modeTextBtn.click();
+          // Focus the text input when switching to text mode
+          setTimeout(() => textInput.focus(), 0);
+        }
+        
         // 'm' for Mirror mode toggle
         if (e.key === 'm' && !e.ctrlKey && !e.metaKey) {
           e.preventDefault();
@@ -2290,6 +2735,7 @@ function createHandler() {
         const showFillToggle = ['rect', 'circle'].includes(brushMode);
         const showDitherControls = brushMode === 'dither';
         const showStampControls = brushMode === 'stamp';
+        const showTextControls = brushMode === 'text';
         
         brushSizeControl.style.display = showBrushSize ? 'inline-flex' : 'none';
         brushShapeControl.style.display = showBrushShape ? 'inline-flex' : 'none';
@@ -2298,6 +2744,7 @@ function createHandler() {
         importBrushBtn.style.display = (brushShape === 'custom' && showBrushShape) ? 'inline-block' : 'none';
         ditherControls.style.display = showDitherControls ? 'flex' : 'none';
         stampControls.style.display = showStampControls ? 'flex' : 'none';
+        textControls.style.display = showTextControls ? 'flex' : 'none';
         updateGridCursor();
       }
       
@@ -2312,69 +2759,76 @@ function createHandler() {
       modePaintBtn.onclick = ()=>{ 
         brushMode = 'paint'; 
         triggerWiggle(modePaintBtn);
-        [modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
+        [modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn, modeDitherBtn, modeStampBtn, modeTextBtn].forEach(b => b.classList.remove('active'));
         clearSelection();
         updateModeUI();
       };
       modeEraseBtn.onclick = ()=>{ 
         brushMode = 'erase'; 
         triggerWiggle(modeEraseBtn);
-        [modePaintBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
+        [modePaintBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn, modeDitherBtn, modeStampBtn, modeTextBtn].forEach(b => b.classList.remove('active'));
         clearSelection();
         updateModeUI();
       };
       modeSprayBtn.onclick = ()=>{ 
         brushMode = 'spray'; 
         triggerWiggle(modeSprayBtn);
-        [modePaintBtn, modeEraseBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
+        [modePaintBtn, modeEraseBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn, modeDitherBtn, modeStampBtn, modeTextBtn].forEach(b => b.classList.remove('active'));
         clearSelection();
         updateModeUI();
       };
       modeFillBtn.onclick = ()=>{ 
         brushMode = 'fill'; 
         triggerWiggle(modeFillBtn);
-        [modePaintBtn, modeEraseBtn, modeSprayBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
+        [modePaintBtn, modeEraseBtn, modeSprayBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn, modeDitherBtn, modeStampBtn, modeTextBtn].forEach(b => b.classList.remove('active'));
         clearSelection();
         updateModeUI();
       };
       modeLineBtn.onclick = ()=>{ 
         brushMode = 'line'; 
         triggerWiggle(modeLineBtn);
-        [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeRectBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
+        [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeRectBtn, modeCircleBtn, modeSelectBtn, modeDitherBtn, modeStampBtn, modeTextBtn].forEach(b => b.classList.remove('active'));
         clearSelection();
         updateModeUI();
       };
       modeRectBtn.onclick = ()=>{ 
         brushMode = 'rect'; 
         triggerWiggle(modeRectBtn);
-        [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
+        [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeCircleBtn, modeSelectBtn, modeDitherBtn, modeStampBtn, modeTextBtn].forEach(b => b.classList.remove('active'));
         clearSelection();
         updateModeUI();
       };
       modeCircleBtn.onclick = ()=>{ 
         brushMode = 'circle'; 
         triggerWiggle(modeCircleBtn);
-        [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
+        [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeSelectBtn, modeDitherBtn, modeStampBtn, modeTextBtn].forEach(b => b.classList.remove('active'));
         clearSelection();
         updateModeUI();
       };
       modeSelectBtn.onclick = ()=>{ 
         brushMode = 'select'; 
         triggerWiggle(modeSelectBtn);
-        [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeDitherBtn, modeStampBtn].forEach(b => b.classList.remove('active'));
+        [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeDitherBtn, modeStampBtn, modeTextBtn].forEach(b => b.classList.remove('active'));
         updateModeUI();
       };
       modeDitherBtn.onclick = ()=>{ 
         brushMode = 'dither'; 
         triggerWiggle(modeDitherBtn);
-        [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn, modeStampBtn].forEach(b => b.classList.remove('active'));
+        [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn, modeStampBtn, modeTextBtn].forEach(b => b.classList.remove('active'));
         clearSelection();
         updateModeUI();
       };
       modeStampBtn.onclick = ()=>{ 
         brushMode = 'stamp'; 
         triggerWiggle(modeStampBtn);
-        [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn, modeDitherBtn].forEach(b => b.classList.remove('active'));
+        [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn, modeDitherBtn, modeTextBtn].forEach(b => b.classList.remove('active'));
+        clearSelection();
+        updateModeUI();
+      };
+      modeTextBtn.onclick = ()=>{ 
+        brushMode = 'text'; 
+        triggerWiggle(modeTextBtn);
+        [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn, modeDitherBtn, modeStampBtn].forEach(b => b.classList.remove('active'));
         clearSelection();
         updateModeUI();
       };
