@@ -538,6 +538,9 @@ function createHandler() {
           <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">R</kbd> Rectangle Tool</div>
           <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">C</kbd> Circle Tool</div>
           <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">V</kbd> Select Tool</div>
+          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">T</kbd> Dither Tool</div>
+          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">K</kbd> Stamp Tool</div>
+          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">M</kbd> Toggle Mirror</div>
           <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">[</kbd> Smaller Brush</div>
           <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">]</kbd> Larger Brush</div>
           <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">O</kbd> Toggle Onion Skin</div>
@@ -573,9 +576,11 @@ function createHandler() {
         <button id="modeSpray" class="w-full aspect-square text-2xl p-2 relative" title="Spray (S)">💨<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">S</span></button>
         <button id="modeFill" class="w-full aspect-square text-2xl p-2 relative" title="Fill (F)">🪣<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">F</span></button>
         <button id="modeLine" class="w-full aspect-square text-2xl p-2 relative" title="Line (L)">📏<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">L</span></button>
-        <button id="modeRect" class="w-full aspect-square text-2xl p-2 relative" title="Rectangle (R)">▭<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">R</span></button>
+        <button id="modeRect" class="w-full aspect-square text-2xl p-2 relative" title="Rectangle (R)">🔳<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">R</span></button>
         <button id="modeCircle" class="w-full aspect-square text-2xl p-2 relative" title="Circle (C)">⭕<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">C</span></button>
         <button id="modeSelect" class="w-full aspect-square text-2xl p-2 relative" title="Select (V)">⬚<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">V</span></button>
+        <button id="modeDither" class="w-full aspect-square text-2xl p-2 relative" title="Dither Fill (T)">◧<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">T</span></button>
+        <button id="modeStamp" class="w-full aspect-square text-2xl p-2 relative" title="Stamp/Clone (K)">🖌️<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">K</span></button>
         <div class="border-t-2 border-black my-2"></div>
         <button id="undo" class="w-full aspect-square text-xl p-2" title="Undo (Ctrl+Z)">↶</button>
         <button id="redo" class="w-full aspect-square text-xl p-2" title="Redo (Ctrl+Y)">↷</button>
@@ -592,10 +597,10 @@ function createHandler() {
               <input id="brushSize" type="range" min="1" max="8" value="1" class="w-32" />
             </div>
             <div id="brushShapeControl" class="flex gap-2">
-              <button id="brushCircle" class="active text-xl">⬤</button>
-              <button id="brushSquare" class="text-xl">⬛</button>
-              <button id="brushTriangle" class="text-xl">▲</button>
-              <button id="brushCustom" class="text-xl">✨</button>
+              <button id="brushCircle" class="active text-xl">⏺️</button>
+              <button id="brushSquare" class="text-xl">⏹️</button>
+              <button id="brushTriangle" class="text-xl">🔼</button>
+              <button id="brushCustom" class="text-xl">⏏️</button>
             </div>
             <label id="fillToggle" style="display:none" class="flex items-center gap-2">
               <input id="fillShapes" type="checkbox" />
@@ -604,6 +609,18 @@ function createHandler() {
             <label class="flex items-center gap-2">
               <input id="pixelPerfect" type="checkbox" />
               <span class="font-bold">PIXEL PERFECT</span>
+            </label>
+            <label class="flex items-center gap-2">
+              <input id="mirrorMode" type="checkbox" />
+              <span class="font-bold">🪞 MIRROR <kbd class="text-xs opacity-70">(M)</kbd></span>
+            </label>
+            <label id="mirrorAxisControl" style="display:none" class="flex items-center gap-2">
+              <span class="font-bold">AXIS:</span>
+              <select id="mirrorAxis" class="min-w-[100px]">
+                <option value="vertical">Vertical |</option>
+                <option value="horizontal">Horizontal —</option>
+                <option value="both">Both +</option>
+              </select>
             </label>
             <div class="border-l-2 border-black mx-2 h-6"></div>
             <label class="flex items-center gap-2">
@@ -624,10 +641,25 @@ function createHandler() {
             <button id="saveSelection" style="display:none" class="btn-warning">💾 SAVE BRUSH</button>
             <button id="moveSelection" style="display:none" class="btn-primary">🔄 MOVE</button>
             <button id="copySelection" style="display:none" class="btn-success">📋 COPY</button>
+            <button id="invertSelection" style="display:none" class="btn-purple">⚡ INVERT</button>
             <button id="flipHSelection" style="display:none" class="btn-purple">↔️ FLIP H</button>
             <button id="flipVSelection" style="display:none" class="btn-purple">↕️ FLIP V</button>
             <button id="rotate90Selection" style="display:none" class="btn-purple">↻ ROTATE</button>
             <button id="clearSelectionBtn" style="display:none">✕ CLEAR</button>
+          </div>
+          <!-- Dither/Stamp Controls -->
+          <div id="ditherControls" style="display:none" class="flex flex-wrap gap-3 items-center mt-3 pt-3 border-t-2 border-black">
+            <span class="font-bold text-red-700">PATTERN:</span>
+            <button id="ditherCheckerboard" class="btn-primary">◧ CHECKER</button>
+            <button id="ditherDots" class="btn-primary">⬝ DOTS</button>
+            <button id="ditherLines" class="btn-primary">☰ LINES</button>
+            <button id="ditherDiagonal" class="btn-primary">⧅ DIAGONAL</button>
+          </div>
+          <div id="stampControls" style="display:none" class="flex flex-wrap gap-3 items-center mt-3 pt-3 border-t-2 border-black">
+            <span class="font-bold text-red-700">STAMP/CLONE:</span>
+            <button id="setStampSource" class="btn-success">📍 SET SOURCE</button>
+            <button id="clearStamp" class="btn-danger">✕ CLEAR</button>
+            <span id="stampStatus" class="text-sm opacity-70"></span>
           </div>
         </div>
 
@@ -717,13 +749,31 @@ function createHandler() {
       const pixelPerfectEl = document.getElementById('pixelPerfect');
       const undoBtn = document.getElementById('undo');
       const redoBtn = document.getElementById('redo');
+      
+      // New tool elements
+      const modeDitherBtn = document.getElementById('modeDither');
+      const modeStampBtn = document.getElementById('modeStamp');
+      const mirrorModeEl = document.getElementById('mirrorMode');
+      const mirrorAxisEl = document.getElementById('mirrorAxis');
+      const mirrorAxisControl = document.getElementById('mirrorAxisControl');
+      const ditherControls = document.getElementById('ditherControls');
+      const stampControls = document.getElementById('stampControls');
+      const invertSelectionBtn = document.getElementById('invertSelection');
+      const ditherCheckerboardBtn = document.getElementById('ditherCheckerboard');
+      const ditherDotsBtn = document.getElementById('ditherDots');
+      const ditherLinesBtn = document.getElementById('ditherLines');
+      const ditherDiagonalBtn = document.getElementById('ditherDiagonal');
+      const setStampSourceBtn = document.getElementById('setStampSource');
+      const clearStampBtn = document.getElementById('clearStamp');
+      const stampStatus = document.getElementById('stampStatus');
+      
       let frames = [];
       let idx = 0;
       let playing = false;
       let playSpeed = 100; // percentage
       let isMouseDown = false;
       let brushSize = 1; // radius in pixels
-      let brushMode = 'paint'; // 'paint' | 'erase' | 'spray' | 'select' | 'fill' | 'line' | 'rect' | 'circle'
+      let brushMode = 'paint'; // 'paint' | 'erase' | 'spray' | 'select' | 'fill' | 'line' | 'rect' | 'circle' | 'dither' | 'stamp'
       let brushShape = 'circle'; // 'circle' | 'square' | 'triangle' | 'custom'
       let currentName = '';
       let onionEnabled = false;
@@ -742,6 +792,13 @@ function createHandler() {
       let drawnPixelsThisStroke = new Set(); // Track pixels drawn in current stroke
       let sprayTimer = null; // For spray tool continuous painting
       let sprayDensity = 0.3; // Probability of painting each pixel in spray radius (0-1)
+      
+      // New tool states
+      let mirrorMode = false;
+      let mirrorAxis = 'vertical'; // 'vertical' | 'horizontal' | 'both'
+      let ditherPattern = 'checkerboard'; // 'checkerboard' | 'dots' | 'lines' | 'diagonal'
+      let stampSource = null; // { x, y, w, h, pattern: [] }
+      let stampPreview = null; // For showing where stamp will be placed
       
       // Undo/Redo system
       let undoStack = [];
@@ -865,6 +922,8 @@ function createHandler() {
       
       // Helper function to actually apply the brush at a position
       function applyBrushAtPosition(cx, cy, arr) {
+        const value = (brushMode === 'paint');
+        
         if (brushShape === 'custom' && currentCustomBrush) {
           const b = customBrushes[currentCustomBrush];
           if (!b) return;
@@ -875,12 +934,9 @@ function createHandler() {
               const nx = cx - offsetX + bx;
               const ny = cy - offsetY + by;
               if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
-              const pi = ny * W + nx;
               const brushPixel = b.pattern[by * b.w + bx];
               if (brushPixel) {
-                arr[pi] = (brushMode === 'paint');
-                const el = grid.children[pi];
-                if (el) el.classList.toggle('on', arr[pi]);
+                applyMirrorAt(nx, ny, value);
               }
             }
           }
@@ -906,10 +962,7 @@ function createHandler() {
               }
             }
             if (!inside) continue;
-            const pi = ny * W + nx;
-            arr[pi] = (brushMode === 'paint');
-            const el = grid.children[pi];
-            if (el) el.classList.toggle('on', arr[pi]);
+            applyMirrorAt(nx, ny, value);
           }
         }
       }
@@ -1101,6 +1154,139 @@ function createHandler() {
         return points;
       }
       
+      // Helper: Apply mirror mode to drawing
+      function applyMirrorAt(x, y, value) {
+        const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+        
+        // Always draw at original position
+        if (x >= 0 && y >= 0 && x < W && y < H) {
+          const idx = y * W + x;
+          arr[idx] = value;
+          const el = grid.children[idx];
+          if (el) el.classList.toggle('on', value);
+        }
+        
+        if (!mirrorMode) return;
+        
+        // Mirror vertically (across vertical axis in center)
+        if (mirrorAxis === 'vertical' || mirrorAxis === 'both') {
+          const mx = W - 1 - x;
+          if (mx >= 0 && y >= 0 && mx < W && y < H && mx !== x) {
+            const idx = y * W + mx;
+            arr[idx] = value;
+            const el = grid.children[idx];
+            if (el) el.classList.toggle('on', value);
+          }
+        }
+        
+        // Mirror horizontally (across horizontal axis in center)
+        if (mirrorAxis === 'horizontal' || mirrorAxis === 'both') {
+          const my = H - 1 - y;
+          if (x >= 0 && my >= 0 && x < W && my < H && my !== y) {
+            const idx = my * W + x;
+            arr[idx] = value;
+            const el = grid.children[idx];
+            if (el) el.classList.toggle('on', value);
+          }
+        }
+        
+        // Both axes - also mirror diagonally
+        if (mirrorAxis === 'both') {
+          const mx = W - 1 - x;
+          const my = H - 1 - y;
+          if (mx >= 0 && my >= 0 && mx < W && my < H && (mx !== x || my !== y)) {
+            const idx = my * W + mx;
+            arr[idx] = value;
+            const el = grid.children[idx];
+            if (el) el.classList.toggle('on', value);
+          }
+        }
+      }
+      
+      // Dither pattern fill
+      function applyDitherFill(startX, startY) {
+        const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+        const startIdx = startY * W + startX;
+        const targetColor = arr[startIdx];
+        
+        const stack = [[startX, startY]];
+        const visited = new Set();
+        
+        while (stack.length > 0) {
+          const [x, y] = stack.pop();
+          const key = y * W + x;
+          
+          if (x < 0 || y < 0 || x >= W || y >= H) continue;
+          if (visited.has(key)) continue;
+          if (arr[key] !== targetColor) continue;
+          
+          visited.add(key);
+          
+          // Apply pattern based on position
+          let shouldFill = false;
+          if (ditherPattern === 'checkerboard') {
+            shouldFill = (x + y) % 2 === 0;
+          } else if (ditherPattern === 'dots') {
+            shouldFill = (x % 2 === 0 && y % 2 === 0);
+          } else if (ditherPattern === 'lines') {
+            shouldFill = y % 2 === 0;
+          } else if (ditherPattern === 'diagonal') {
+            shouldFill = (x - y) % 2 === 0;
+          }
+          
+          arr[key] = shouldFill;
+          const el = grid.children[key];
+          if (el) el.classList.toggle('on', shouldFill);
+          
+          stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+        }
+      }
+      
+      // Stamp/Clone tool
+      function applyStamp(x, y) {
+        if (!stampSource) return;
+        const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+        
+        const offsetX = Math.floor(stampSource.w / 2);
+        const offsetY = Math.floor(stampSource.h / 2);
+        
+        for (let sy = 0; sy < stampSource.h; sy++) {
+          for (let sx = 0; sx < stampSource.w; sx++) {
+            const nx = x - offsetX + sx;
+            const ny = y - offsetY + sy;
+            if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+            
+            const srcIdx = sy * stampSource.w + sx;
+            const destIdx = ny * W + nx;
+            arr[destIdx] = stampSource.pattern[srcIdx];
+            const el = grid.children[destIdx];
+            if (el) el.classList.toggle('on', arr[destIdx]);
+          }
+        }
+      }
+      
+      // Invert selection
+      function invertSelection() {
+        if (!selection.active) return;
+        
+        const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+        const minX = Math.min(selection.startX, selection.endX);
+        const maxX = Math.max(selection.startX, selection.endX);
+        const minY = Math.min(selection.startY, selection.endY);
+        const maxY = Math.max(selection.startY, selection.endY);
+        
+        saveUndoState();
+        
+        for (let y = minY; y <= maxY; y++) {
+          for (let x = minX; x <= maxX; x++) {
+            const idx = y * W + x;
+            arr[idx] = !arr[idx];
+            const el = grid.children[idx];
+            if (el) el.classList.toggle('on', arr[idx]);
+          }
+        }
+      }
+      
       function renderGrid(){
         console.log('renderGrid called - W:', W, 'H:', H, 'grid element:', grid);
         grid.style.gridTemplateColumns = 'repeat(' + W + ',12px)';
@@ -1183,6 +1369,25 @@ function createHandler() {
           } else if (brushMode === 'fill') {
             saveUndoState(); // Save before fill
             floodFill(x, y);
+          } else if (brushMode === 'dither') {
+            saveUndoState(); // Save before dither fill
+            applyDitherFill(x, y);
+          } else if (brushMode === 'stamp') {
+            if (stampSource) {
+              // If stamp source is set, place it
+              saveUndoState(); // Save before stamp
+              applyStamp(x, y);
+            } else {
+              // If no stamp source, allow selection to capture one
+              selection.active = true;
+              selection.startX = x;
+              selection.startY = y;
+              selection.endX = x;
+              selection.endY = y;
+              selection.moving = false;
+              selection.dragging = false;
+              createSelectionBox();
+            }
           } else if (brushMode === 'spray') {
             saveUndoState(); // Save before spray stroke
             applySprayAt(i);
@@ -1251,6 +1456,11 @@ function createHandler() {
               selection.endY = y;
               updateSelectionBox();
             }
+          } else if (brushMode === 'stamp' && selection.active && !stampSource) {
+            // Allow dragging selection box when in stamp mode without source
+            selection.endX = x;
+            selection.endY = y;
+            updateSelectionBox();
           } else if (brushMode === 'line' && lineStart) {
             if (!tempOverlay) storeTempOverlay(); // Store once at start
             clearTempOverlay(); // Clear previous preview
@@ -1326,6 +1536,7 @@ function createHandler() {
         saveSelectionBtn.style.display = 'none';
         moveSelectionBtn.style.display = 'none';
         copySelectionBtn.style.display = 'none';
+        invertSelectionBtn.style.display = 'none';
         flipHSelectionBtn.style.display = 'none';
         flipVSelectionBtn.style.display = 'none';
         rotate90SelectionBtn.style.display = 'none';
@@ -1691,6 +1902,49 @@ function createHandler() {
       fillShapesEl.onchange = ()=>{ fillShapes = fillShapesEl.checked; };
       pixelPerfectEl.onchange = ()=>{ pixelPerfect = pixelPerfectEl.checked; };
       
+      // Mirror mode controls
+      mirrorModeEl.onchange = ()=>{ 
+        mirrorMode = mirrorModeEl.checked; 
+        mirrorAxisControl.style.display = mirrorMode ? 'flex' : 'none';
+      };
+      mirrorAxisEl.onchange = ()=>{ mirrorAxis = mirrorAxisEl.value; };
+      
+      // Dither pattern buttons
+      ditherCheckerboardBtn.onclick = ()=>{ ditherPattern = 'checkerboard'; };
+      ditherDotsBtn.onclick = ()=>{ ditherPattern = 'dots'; };
+      ditherLinesBtn.onclick = ()=>{ ditherPattern = 'lines'; };
+      ditherDiagonalBtn.onclick = ()=>{ ditherPattern = 'diagonal'; };
+      
+      // Stamp/Clone controls
+      setStampSourceBtn.onclick = ()=>{ 
+        if (!selection.active) {
+          alert('Please select an area first to set as stamp source');
+          return;
+        }
+        const minX = Math.min(selection.startX, selection.endX);
+        const maxX = Math.max(selection.startX, selection.endX);
+        const minY = Math.min(selection.startY, selection.endY);
+        const maxY = Math.max(selection.startY, selection.endY);
+        const w = maxX - minX + 1;
+        const h = maxY - minY + 1;
+        
+        const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+        const pattern = [];
+        for (let y = minY; y <= maxY; y++) {
+          for (let x = minX; x <= maxX; x++) {
+            pattern.push(arr[y * W + x]);
+          }
+        }
+        
+        stampSource = { x: minX, y: minY, w, h, pattern };
+        stampStatus.textContent = 'Stamp: ' + w + 'x' + h + ' pixels';
+      };
+      
+      clearStampBtn.onclick = ()=>{ 
+        stampSource = null; 
+        stampStatus.textContent = '';
+      };
+      
       // Undo/Redo buttons
       undoBtn.onclick = ()=>{ undo(); };
       redoBtn.onclick = ()=>{ redo(); };
@@ -1842,6 +2096,26 @@ function createHandler() {
           modeSelectBtn.click();
         }
         
+        // 't' for Dither tool
+        if (e.key === 't' && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          modeDitherBtn.click();
+        }
+        
+        // 'k' for Stamp tool
+        if (e.key === 'k' && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          modeStampBtn.click();
+        }
+        
+        // 'm' for Mirror mode toggle
+        if (e.key === 'm' && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          mirrorModeEl.checked = !mirrorModeEl.checked;
+          mirrorMode = mirrorModeEl.checked;
+          mirrorAxisControl.style.display = mirrorMode ? 'flex' : 'none';
+        }
+        
         // '[' to decrease brush size
         if (e.key === '[' && !e.ctrlKey && !e.metaKey) {
           e.preventDefault();
@@ -1871,11 +2145,15 @@ function createHandler() {
         const showBrushSize = ['paint', 'erase', 'spray'].includes(brushMode);
         const showBrushShape = ['paint', 'erase'].includes(brushMode);
         const showFillToggle = ['rect', 'circle'].includes(brushMode);
+        const showDitherControls = brushMode === 'dither';
+        const showStampControls = brushMode === 'stamp';
         
         brushSizeControl.style.display = showBrushSize ? 'inline-flex' : 'none';
         brushShapeControl.style.display = showBrushShape ? 'inline-flex' : 'none';
         fillToggle.style.display = showFillToggle ? 'inline-flex' : 'none';
         customBrushSel.style.display = (brushShape === 'custom' && showBrushShape) ? 'inline-block' : 'none';
+        ditherControls.style.display = showDitherControls ? 'flex' : 'none';
+        stampControls.style.display = showStampControls ? 'flex' : 'none';
         updateGridCursor();
       }
       
@@ -1939,7 +2217,21 @@ function createHandler() {
       modeSelectBtn.onclick = ()=>{ 
         brushMode = 'select'; 
         triggerWiggle(modeSelectBtn);
-        [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn].forEach(b => b.classList.remove('active'));
+        [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeDitherBtn, modeStampBtn].forEach(b => b.classList.remove('active'));
+        updateModeUI();
+      };
+      modeDitherBtn.onclick = ()=>{ 
+        brushMode = 'dither'; 
+        triggerWiggle(modeDitherBtn);
+        [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn, modeStampBtn].forEach(b => b.classList.remove('active'));
+        clearSelection();
+        updateModeUI();
+      };
+      modeStampBtn.onclick = ()=>{ 
+        brushMode = 'stamp'; 
+        triggerWiggle(modeStampBtn);
+        [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn, modeDitherBtn].forEach(b => b.classList.remove('active'));
+        clearSelection();
         updateModeUI();
       };
       
@@ -2001,6 +2293,9 @@ function createHandler() {
       
       // Copy selection (duplicate and enter move mode)
       copySelectionBtn.onclick = ()=>{ duplicateSelection(); };
+      
+      // Invert selection
+      invertSelectionBtn.onclick = ()=>{ invertSelection(); };
       
       // Flip selection horizontally
       flipHSelectionBtn.onclick = ()=>{ flipSelectionHorizontal(); };
@@ -2100,10 +2395,36 @@ function createHandler() {
           saveSelectionBtn.style.display = 'inline-block';
           moveSelectionBtn.style.display = 'inline-block';
           copySelectionBtn.style.display = 'inline-block';
+          invertSelectionBtn.style.display = 'inline-block';
           flipHSelectionBtn.style.display = 'inline-block';
           flipVSelectionBtn.style.display = 'inline-block';
           rotate90SelectionBtn.style.display = 'inline-block';
           clearSelectionBtn.style.display = 'inline-block';
+        }
+        
+        // Handle stamp selection completion
+        if (brushMode === 'stamp' && selection.active && !stampSource) {
+          // Auto-capture the selection as stamp source
+          const minX = Math.min(selection.startX, selection.endX);
+          const maxX = Math.max(selection.startX, selection.endX);
+          const minY = Math.min(selection.startY, selection.endY);
+          const maxY = Math.max(selection.startY, selection.endY);
+          const w = maxX - minX + 1;
+          const h = maxY - minY + 1;
+          
+          const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+          const pattern = [];
+          for (let y = minY; y <= maxY; y++) {
+            for (let x = minX; x <= maxX; x++) {
+              pattern.push(arr[y * W + x]);
+            }
+          }
+          
+          stampSource = { x: minX, y: minY, w, h, pattern };
+          stampStatus.textContent = 'Stamp: ' + w + 'x' + h + ' pixels (click to place)';
+          
+          // Clear the selection box
+          clearSelection();
         }
       });
       
