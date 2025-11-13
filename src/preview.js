@@ -586,37 +586,70 @@ function createHandler() {
         const arr = frames[idx]?.arr || new Array(W*H).fill(false);
         for(let i=0;i<W*H;i++){
           const d = document.createElement('div'); d.className = 'cell' + (arr[i]?' on':''); d.dataset.idx = String(i);
-          d.onmousedown = (e)=>{ 
-            e.preventDefault(); 
-            isMouseDown = true; 
-            if (brushMode === 'select') {
-              const x = i % W;
-              const y = Math.floor(i / W);
-              selection.active = true;
-              selection.startX = x;
-              selection.startY = y;
-              selection.endX = x;
-              selection.endY = y;
-              createSelectionBox();
-            } else {
-              applyBrushAt(i); 
-            }
-          };
-          d.onmouseover = (e)=>{ 
-            if (isMouseDown){ 
-              if (brushMode === 'select') {
-                const x = i % W;
-                const y = Math.floor(i / W);
-                selection.endX = x;
-                selection.endY = y;
-                updateSelectionBox();
-              } else {
-                applyBrushAt(i); 
-              }
-            } 
-          };
           grid.appendChild(d);
         }
+        
+        // Add transparent overlay to handle mouse events over gaps
+        const overlay = document.createElement('div');
+        overlay.style.position = 'absolute';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.pointerEvents = 'all';
+        overlay.style.background = 'transparent';
+        overlay.style.cursor = brushMode === 'select' ? 'crosshair' : 'default';
+        
+        const cellSize = 12;
+        const gap = 2;
+        
+        function getCellFromPosition(clientX, clientY) {
+          const rect = grid.getBoundingClientRect();
+          const x = clientX - rect.left - 6; // 6px padding
+          const y = clientY - rect.top - 6;
+          const cellX = Math.floor(x / (cellSize + gap));
+          const cellY = Math.floor(y / (cellSize + gap));
+          if (cellX < 0 || cellY < 0 || cellX >= W || cellY >= H) return -1;
+          return cellY * W + cellX;
+        }
+        
+        overlay.onmousedown = (e) => {
+          e.preventDefault();
+          isMouseDown = true;
+          const i = getCellFromPosition(e.clientX, e.clientY);
+          if (i < 0) return;
+          
+          if (brushMode === 'select') {
+            const x = i % W;
+            const y = Math.floor(i / W);
+            selection.active = true;
+            selection.startX = x;
+            selection.startY = y;
+            selection.endX = x;
+            selection.endY = y;
+            createSelectionBox();
+          } else {
+            applyBrushAt(i);
+          }
+        };
+        
+        overlay.onmousemove = (e) => {
+          if (!isMouseDown) return;
+          const i = getCellFromPosition(e.clientX, e.clientY);
+          if (i < 0) return;
+          
+          if (brushMode === 'select') {
+            const x = i % W;
+            const y = Math.floor(i / W);
+            selection.endX = x;
+            selection.endY = y;
+            updateSelectionBox();
+          } else {
+            applyBrushAt(i);
+          }
+        };
+        
+        grid.appendChild(overlay);
         sizeBadge.textContent = W + '×' + H;
         updateOnionSkins();
       }
@@ -791,6 +824,7 @@ function createHandler() {
         clearSelection();
         saveSelectionBtn.style.display = 'none';
         customBrushSel.style.display = brushShape === 'custom' ? 'inline-block' : 'none';
+        updateGridCursor();
       };
       modeEraseBtn.onclick = ()=>{ 
         brushMode = 'erase'; 
@@ -800,6 +834,7 @@ function createHandler() {
         clearSelection();
         saveSelectionBtn.style.display = 'none';
         customBrushSel.style.display = brushShape === 'custom' ? 'inline-block' : 'none';
+        updateGridCursor();
       };
       modeSelectBtn.onclick = ()=>{ 
         brushMode = 'select'; 
@@ -808,8 +843,15 @@ function createHandler() {
         modeEraseBtn.classList.remove('active');
         saveSelectionBtn.style.display = 'inline-block';
         customBrushSel.style.display = 'none';
-        grid.style.cursor = 'crosshair';
+        updateGridCursor();
       };
+      
+      function updateGridCursor() {
+        const overlay = grid.querySelector('div[style*="position: absolute"]');
+        if (overlay) {
+          overlay.style.cursor = brushMode === 'select' ? 'crosshair' : 'default';
+        }
+      }
       
       // Brush shape buttons
       brushCircleBtn.onclick = ()=>{ 
