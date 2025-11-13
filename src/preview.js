@@ -373,7 +373,12 @@ function createHandler() {
 				}
 			});
         } else if (parsed.pathname === "/anim" && req.method === "GET") {
-			res.writeHead(200, { "Content-Type": "text/html" });
+			res.writeHead(200, { 
+                "Content-Type": "text/html",
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            });
 			res.end(`<!doctype html>
 <html>
   <head>
@@ -638,6 +643,7 @@ function createHandler() {
             <select id="customBrushSel" class="min-w-[180px]" style="display:none">
               <option value="">Select brush...</option>
             </select>
+            <button id="importBrush" class="btn-success" style="display:none">📥 IMPORT BRUSH</button>
             <button id="saveSelection" style="display:none" class="btn-warning">💾 SAVE BRUSH</button>
             <button id="moveSelection" style="display:none" class="btn-primary">🔄 MOVE</button>
             <button id="copySelection" style="display:none" class="btn-success">📋 COPY</button>
@@ -707,7 +713,28 @@ function createHandler() {
     </div>
     </div>
     
+    <!-- Import Brush Modal -->
+    <div id="importBrushModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center;">
+      <div class="comic-panel p-6" style="max-width:600px; width:90%; max-height:80vh; overflow:auto;">
+        <h2 class="text-3xl mb-4 text-purple-700" style="font-family: 'Bangers', cursive;">📥 IMPORT CUSTOM BRUSH</h2>
+        <p class="mb-3 font-bold">Paste your brush code below (array format with name):</p>
+        <p class="mb-3 text-sm opacity-70">Example: "pacman": [[1,1,1],[1,0,1],[1,1,1]]</p>
+        <textarea id="brushCodeInput" class="w-full p-3 border-4 border-black font-mono text-sm" rows="12" placeholder='"mybrush": [
+  [1,1,1,0,0],
+  [1,0,1,0,0],
+  [1,1,1,0,0],
+],'></textarea>
+        <div class="flex gap-3 mt-4">
+          <button id="importBrushConfirm" class="btn-success flex-1">✓ IMPORT</button>
+          <button id="importBrushCancel" class="btn-danger flex-1">✕ CANCEL</button>
+        </div>
+        <div id="importBrushError" class="mt-3 p-3 bg-red-200 border-2 border-red-600 rounded font-bold" style="display:none;"></div>
+        <div id="importBrushSuccess" class="mt-3 p-3 bg-green-200 border-2 border-green-600 rounded font-bold" style="display:none;"></div>
+      </div>
+    </div>
+    
     <script>
+      console.log('=== Animation Maker Script Loading ===');
       let W = 84, H = 28;
       async function getLiveSize(){ try{ const r = await fetch('/frame.bits'); const j = await r.json(); if (j && j.w && j.h){ W=j.w; H=j.h; } }catch{} }
       const grid = document.getElementById('grid');
@@ -766,6 +793,19 @@ function createHandler() {
       const setStampSourceBtn = document.getElementById('setStampSource');
       const clearStampBtn = document.getElementById('clearStamp');
       const stampStatus = document.getElementById('stampStatus');
+      
+      // Import brush elements
+      const importBrushBtn = document.getElementById('importBrush');
+      const importBrushModal = document.getElementById('importBrushModal');
+      const brushCodeInput = document.getElementById('brushCodeInput');
+      const importBrushConfirm = document.getElementById('importBrushConfirm');
+      const importBrushCancel = document.getElementById('importBrushCancel');
+      const importBrushError = document.getElementById('importBrushError');
+      const importBrushSuccess = document.getElementById('importBrushSuccess');
+      
+      console.log('=== DOM Elements Retrieved ===');
+      console.log('grid:', grid);
+      console.log('brushCircleBtn:', brushCircleBtn);
       
       let frames = [];
       let idx = 0;
@@ -1945,6 +1985,110 @@ function createHandler() {
         stampStatus.textContent = '';
       };
       
+      // Import brush button
+      importBrushBtn.onclick = ()=>{ 
+        importBrushModal.style.display = 'flex';
+        brushCodeInput.value = '';
+        importBrushError.style.display = 'none';
+        importBrushSuccess.style.display = 'none';
+      };
+      
+      importBrushCancel.onclick = ()=>{ 
+        importBrushModal.style.display = 'none';
+      };
+      
+      importBrushConfirm.onclick = ()=>{ 
+        const code = brushCodeInput.value.trim();
+        if (!code) {
+          importBrushError.textContent = 'Please paste brush code!';
+          importBrushError.style.display = 'block';
+          importBrushSuccess.style.display = 'none';
+          return;
+        }
+        
+        try {
+          // Parse the brush code
+          // Remove trailing comma if present
+          let cleanCode = code.trim();
+          if (cleanCode.endsWith(',')) {
+            cleanCode = cleanCode.slice(0, -1);
+          }
+          
+          // Expected format: "name": [[1,0,1],[0,1,0]] or multi-line
+          const match = cleanCode.match(/"([^"]+)"\s*:\s*(\[[\s\S]*\])/);
+          if (!match) {
+            throw new Error('Invalid format. Expected: "name": [[1,0],[1,1]]');
+          }
+          
+          const name = match[1];
+          let arrayStr = match[2];
+          
+          // Remove trailing commas from array rows for eval safety
+          arrayStr = arrayStr.replace(/,(\s*\])/g, '$1');
+          
+          // Parse the array
+          const rows = eval(arrayStr);
+          
+          if (!Array.isArray(rows) || rows.length === 0) {
+            throw new Error('Invalid array structure');
+          }
+          
+          // Validate all rows are arrays
+          const h = rows.length;
+          const w = rows[0].length;
+          
+          for (let row of rows) {
+            if (!Array.isArray(row) || row.length !== w) {
+              throw new Error('All rows must have the same length');
+            }
+          }
+          
+          // Convert to flat pattern
+          const pattern = [];
+          for (let row of rows) {
+            for (let val of row) {
+              pattern.push(!!val); // Convert to boolean
+            }
+          }
+          
+          // Save the brush
+          customBrushes[name] = { w, h, pattern };
+          
+          // Add to dropdown
+          const option = document.createElement('option');
+          option.value = name;
+          option.textContent = name + ' (' + w + 'x' + h + ')';
+          customBrushSel.appendChild(option);
+          
+          // Select the new brush
+          currentCustomBrush = name;
+          customBrushSel.value = name;
+          brushShape = 'custom';
+          brushCustomBtn.click();
+          
+          importBrushSuccess.textContent = 'Brush "' + name + '" (' + w + 'x' + h + ') imported successfully!';
+          importBrushSuccess.style.display = 'block';
+          importBrushError.style.display = 'none';
+          
+          // Close modal after 1.5 seconds
+          setTimeout(() => {
+            importBrushModal.style.display = 'none';
+          }, 1500);
+          
+        } catch (error) {
+          importBrushError.textContent = 'Error: ' + error.message;
+          importBrushError.style.display = 'block';
+          importBrushSuccess.style.display = 'none';
+        }
+      };
+      
+      // Close modal when clicking outside
+      importBrushModal.onclick = (e)=>{ 
+        if (e.target === importBrushModal) {
+          importBrushModal.style.display = 'none';
+        }
+      };
+      
       // Undo/Redo buttons
       undoBtn.onclick = ()=>{ undo(); };
       redoBtn.onclick = ()=>{ redo(); };
@@ -2152,6 +2296,7 @@ function createHandler() {
         brushShapeControl.style.display = showBrushShape ? 'inline-flex' : 'none';
         fillToggle.style.display = showFillToggle ? 'inline-flex' : 'none';
         customBrushSel.style.display = (brushShape === 'custom' && showBrushShape) ? 'inline-block' : 'none';
+        importBrushBtn.style.display = (brushShape === 'custom' && showBrushShape) ? 'inline-block' : 'none';
         ditherControls.style.display = showDitherControls ? 'flex' : 'none';
         stampControls.style.display = showStampControls ? 'flex' : 'none';
         updateGridCursor();
@@ -2250,6 +2395,7 @@ function createHandler() {
         brushTriangleBtn.classList.remove('active');
         brushCustomBtn.classList.remove('active');
         customBrushSel.style.display = 'none';
+        importBrushBtn.style.display = 'none';
       };
       brushSquareBtn.onclick = ()=>{ 
         brushShape = 'square'; 
@@ -2258,6 +2404,7 @@ function createHandler() {
         brushTriangleBtn.classList.remove('active');
         brushCustomBtn.classList.remove('active');
         customBrushSel.style.display = 'none';
+        importBrushBtn.style.display = 'none';
       };
       brushTriangleBtn.onclick = ()=>{ 
         brushShape = 'triangle'; 
@@ -2266,6 +2413,7 @@ function createHandler() {
         brushSquareBtn.classList.remove('active');
         brushCustomBtn.classList.remove('active');
         customBrushSel.style.display = 'none';
+        importBrushBtn.style.display = 'none';
       };
       brushCustomBtn.onclick = ()=>{ 
         brushShape = 'custom'; 
@@ -2274,6 +2422,7 @@ function createHandler() {
         brushSquareBtn.classList.remove('active');
         brushTriangleBtn.classList.remove('active');
         customBrushSel.style.display = 'inline-block';
+        importBrushBtn.style.display = 'inline-block';
         if (!currentCustomBrush && Object.keys(customBrushes).length > 0) {
           currentCustomBrush = Object.keys(customBrushes)[0];
           customBrushSel.value = currentCustomBrush;
@@ -3044,6 +3193,15 @@ function createFrontendHandler() {
 function startFrontendServer(port = 4000) {
     try{
         const server = http.createServer(createFrontendHandler());
+        server.on('error', (err) => {
+            if (err.code === 'EADDRINUSE') {
+                console.log(`[frontend] Port ${port} in use, trying ${port + 1}...`);
+                server.close();
+                startFrontendServer(port + 1);
+            } else {
+                console.error('[frontend] Server error:', err);
+            }
+        });
         server.listen(port, () => {
             console.log(`[frontend] Listening on http://localhost:${port}`);
         });
