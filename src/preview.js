@@ -378,199 +378,268 @@ function createHandler() {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Animation Maker</title>
+    <title>🎨 Animation Maker - Comic Style!</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#f7f7f7; margin:0; padding:16px; }
-      .wrap{ display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; }
-      .tools{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-      .grid{ display:grid; grid-auto-rows:12px; gap:2px; background:#111; padding:6px; }
-      .cell{ width:12px; height:12px; background:#000; border-radius:2px; cursor:pointer; }
-      .cell.on{ background:#fff; }
-      /* Preview for line/shape tools */
-      .cell.preview{ outline:2px dotted #0af; outline-offset:-2px; z-index:10; }
-      /* Onion skin ghosting */
-      .cell.prev:not(.on){ background:#333; }
-      .cell.next:not(.on){ background:#666; }
-      .timeline{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:8px; }
-      .frameThumb{ display:grid; grid-template-columns: repeat(var(--w), 2px); grid-auto-rows:2px; gap:1px; padding:3px; background:#111; border:1px solid #333; cursor:pointer; }
+      @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:wght@400;700&display=swap');
+      
+      body { 
+        font-family: 'Comic Neue', cursive, system-ui; 
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background-attachment: fixed;
+        margin: 0;
+        padding: 0;
+      }
+      
+      h1, h2, h3 { font-family: 'Bangers', cursive; letter-spacing: 2px; }
+      
+      .comic-panel {
+        background: white;
+        border: 4px solid #000;
+        box-shadow: 8px 8px 0 rgba(0,0,0,0.3), inset 2px 2px 0 rgba(255,255,255,0.5);
+      }
+      
+      .grid{ 
+        display:grid; grid-auto-rows:12px; gap:2px; 
+        background: linear-gradient(45deg, #1a1a1a 0%, #2d2d2d 100%);
+        padding:8px; border: 4px solid #000;
+        box-shadow: 0 0 20px rgba(0,0,0,0.5), inset 0 0 10px rgba(255,255,255,0.1);
+        position: relative;
+      }
+      
+      .grid::before {
+        content: 'POW!'; position: absolute; top: -30px; right: -20px;
+        background: #ffeb3b; color: #000;
+        font-family: 'Bangers', cursive; font-size: 24px;
+        padding: 5px 15px; border: 3px solid #000;
+        transform: rotate(15deg);
+        box-shadow: 4px 4px 0 rgba(0,0,0,0.3);
+        z-index: 100;
+      }
+      
+      .cell{ 
+        width:12px; height:12px; background: #0a0a0a;
+        border-radius:2px; cursor:pointer; 
+        transition: all 0.1s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        border: 1px solid #333;
+      }
+      .cell.on{ 
+        background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
+        box-shadow: 0 0 8px rgba(255,255,255,0.8), inset 0 0 4px rgba(0,0,0,0.2);
+        transform: scale(1.1); border: 1px solid #fff;
+      }
+      .cell:hover { transform: scale(1.15); z-index: 10; }
+      .cell.preview{ outline: 3px dotted #00ffff; outline-offset:-2px; z-index:10; animation: pulse-preview 0.5s infinite; }
+      @keyframes pulse-preview { 0%, 100% { outline-color: #00ffff; } 50% { outline-color: #ff00ff; } }
+      .cell.prev:not(.on){ background: rgba(255, 100, 100, 0.3); }
+      .cell.next:not(.on){ background: rgba(100, 255, 100, 0.3); }
+      
+      .timeline{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:12px; }
+      .frameThumb{ display:grid; grid-template-columns: repeat(var(--w), 2px); grid-auto-rows:2px; gap:1px; padding:4px; background:#222; border:3px solid #000; cursor:pointer; transition: transform 0.2s; box-shadow: 3px 3px 0 rgba(0,0,0,0.3); }
+      .frameThumb:hover { transform: scale(1.1) rotate(-2deg); }
       .frameThumb .p{ width:2px; height:2px; background:#000; }
       .frameThumb .p.on{ background:#fff; }
-      .badge{ font-size:11px; color:#555; }
-      input[type=number]{ width:90px; }
-      button{ padding:6px 10px; }
-      .seg{ display:inline-flex; background:#e8e8e8; border-radius:6px; overflow:hidden; }
-      .seg>button{ padding:6px 10px; border:0; background:transparent; }
-      .seg>button.active{ background:#0b5; color:#fff; }
-      .range{ display:inline-flex; align-items:center; gap:6px; }
-      input[type=range]{ width:120px; }
-      .cell.selecting{ outline:2px dashed #0af; outline-offset:-1px; }
-      .selection-box{ position:absolute; border:2px dashed #0af; background:rgba(0,170,255,0.1); pointer-events:none; z-index:100; }
-      .toolbar-section{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:8px 12px; background:#fff; border-radius:8px; border:1px solid #ddd; }
-      .toolbar-section h3{ margin:0; font-size:13px; font-weight:600; color:#333; min-width:100%; }
-      .main-layout{ display:grid; grid-template-columns: 1fr auto; gap:20px; margin-top:16px; }
-      .canvas-area{ display:flex; flex-direction:column; gap:12px; }
-      .sidebar{ min-width:280px; max-width:280px; display:flex; flex-direction:column; gap:12px; }
+      
+      button { font-family: 'Comic Neue', cursive; font-weight: bold; padding: 8px 16px; border: 3px solid #000; background: linear-gradient(180deg, #fff 0%, #e0e0e0 100%); color: #000; cursor: pointer; transition: all 0.1s; box-shadow: 4px 4px 0 rgba(0,0,0,0.3); text-transform: uppercase; font-size: 12px; }
+      button:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 rgba(0,0,0,0.3); }
+      button:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 rgba(0,0,0,0.3); }
+      button.active { background: linear-gradient(180deg, #ffeb3b 0%, #fbc02d 100%); box-shadow: 4px 4px 0 rgba(0,0,0,0.3), inset 0 0 10px rgba(255,255,255,0.5); }
+      button:disabled { opacity: 0.5; cursor: not-allowed; }
+      
+      .btn-primary { background: linear-gradient(180deg, #4fc3f7 0%, #039be5 100%) !important; color: white !important; }
+      .btn-success { background: linear-gradient(180deg, #81c784 0%, #43a047 100%) !important; color: white !important; }
+      .btn-danger { background: linear-gradient(180deg, #e57373 0%, #d32f2f 100%) !important; color: white !important; }
+      .btn-warning { background: linear-gradient(180deg, #ffb74d 0%, #f57c00 100%) !important; color: white !important; }
+      .btn-purple { background: linear-gradient(180deg, #ba68c8 0%, #8e24aa 100%) !important; color: white !important; }
+      
+      input[type=range] { -webkit-appearance: none; height: 8px; background: linear-gradient(90deg, #ff6b6b 0%, #4ecdc4 100%); border: 2px solid #000; border-radius: 10px; box-shadow: 2px 2px 0 rgba(0,0,0,0.2); }
+      input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background: #ffeb3b; border: 3px solid #000; border-radius: 50%; cursor: pointer; box-shadow: 2px 2px 0 rgba(0,0,0,0.3); }
+      input[type=range]::-moz-range-thumb { width: 20px; height: 20px; background: #ffeb3b; border: 3px solid #000; border-radius: 50%; cursor: pointer; box-shadow: 2px 2px 0 rgba(0,0,0,0.3); }
+      
+      input[type=text], input[type=number], select { font-family: 'Comic Neue', cursive; padding: 8px 12px; border: 3px solid #000; background: white; box-shadow: 3px 3px 0 rgba(0,0,0,0.2); font-weight: bold; }
+      input[type=text]:focus, input[type=number]:focus, select:focus { outline: none; box-shadow: 3px 3px 0 rgba(0,0,0,0.2), 0 0 0 3px #ffeb3b; }
+      input[type=checkbox] { width: 20px; height: 20px; cursor: pointer; }
+      
+      .selection-box{ position:absolute; border: 4px dashed #ff00ff; background:rgba(255,0,255,0.15); pointer-events:none; z-index:100; animation: march 0.5s linear infinite; }
+      @keyframes march { 0% { border-color: #ff00ff; } 50% { border-color: #00ffff; } 100% { border-color: #ff00ff; } }
+      
+      .comic-burst { background: radial-gradient(circle at 20% 50%, transparent 20%, rgba(255,235,59,0.1) 21%, rgba(255,235,59,0.1) 34%, transparent 35%), radial-gradient(circle at 60% 70%, transparent 20%, rgba(100,255,218,0.1) 21%, rgba(100,255,218,0.1) 34%, transparent 35%), radial-gradient(circle at 50% 50%, #fff 0%, #f0f0f0 100%); }
+      
+      /* Icon button styles for toolbar */
+      button.w-full.aspect-square { 
+        min-height: 48px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center;
+        border-radius: 8px;
+        transition: all 0.2s;
+      }
+      button.w-full.aspect-square:hover { 
+        transform: scale(1.1); 
+        z-index: 10;
+      }
+      button.w-full.aspect-square.active {
+        transform: scale(1.05);
+        box-shadow: 6px 6px 0 rgba(0,0,0,0.3), inset 0 0 15px rgba(255,235,59,0.6);
+      }
     </style>
   </head>
-  <body>
-    <h2 style="margin:0 0 16px">Animation Maker</h2>
+  <body class="min-h-screen p-6">
+    <div class="comic-panel mb-6 p-6 text-center">
+      <h1 class="text-6xl text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 m-0 drop-shadow-lg" style="font-family: 'Bangers', cursive;">
+        🎨 FLIPDOT ANIMATION MAKER! 💥
+      </h1>
+      <p class="text-xl mt-2 font-bold">Create Amazing Pixel Art Animations!</p>
+      <details class="mt-4 text-left max-w-4xl mx-auto">
+        <summary class="cursor-pointer font-bold text-lg text-blue-600 hover:text-blue-800">⌨️ Keyboard Shortcuts</summary>
+        <div class="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
+          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">Space</kbd> Play/Stop</div>
+          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">&lt;</kbd> or <kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">,</kbd> Previous Frame</div>
+          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">&gt;</kbd> or <kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">.</kbd> Next Frame</div>
+          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">I</kbd> Insert Frame</div>
+          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">D</kbd> Duplicate Frame</div>
+          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">Del</kbd> Delete Frame</div>
+          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">P</kbd> Paint Tool</div>
+          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">E</kbd> Erase Tool</div>
+          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">S</kbd> Spray Tool</div>
+          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">F</kbd> Fill Tool</div>
+          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">L</kbd> Line Tool</div>
+          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">R</kbd> Rectangle Tool</div>
+          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">C</kbd> Circle Tool</div>
+          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">V</kbd> Select Tool</div>
+          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">[</kbd> Smaller Brush</div>
+          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">]</kbd> Larger Brush</div>
+          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">Ctrl+Z</kbd> Undo</div>
+          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">Ctrl+Y</kbd> Redo</div>
+          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">Ctrl+S</kbd> Save</div>
+        </div>
+      </details>
+    </div>
     
-    <!-- Top Controls -->
-    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px">
-      <!-- Animation Management -->
-      <div class="toolbar-section" style="flex:1; min-width:400px">
-        <h3>Animation</h3>
-        <select id="animSel" style="flex:1; min-width:140px"></select>
-        <input id="animName" placeholder="Animation name" style="padding:6px 8px; flex:1; min-width:140px" />
-        <button id="animNew">+ New</button>
-        <button id="animSaveAs">Save As</button>
-        <button id="save">💾 Save</button>
-        <button id="export" style="background:#0b5;color:white;border:1px solid #0a4">� Export</button>
-        <button id="animSetActive" style="background:#0af;color:white;border:1px solid #09e">✓ Set Active</button>
-        <button id="animDelete" style="background:#c92a2a;color:white;border:1px solid #a61e1e">🗑️ Delete</button>
-      </div>
-      
-      <!-- Playback Controls -->
-      <div class="toolbar-section">
-        <h3>Playback</h3>
-        <button id="play">▶ Play</button>
-        <button id="stop">■ Stop</button>
-        <span class="range">
-          <label for="playSpeed">Speed</label>
-          <input id="playSpeed" type="range" min="10" max="200" value="100" />
-          <span id="speedLabel" style="min-width:45px">100%</span>
-        </span>
-        <a href="/view?scene=anim" target="_blank" style="padding:6px 10px; background:#333; color:#fff; text-decoration:none; border-radius:4px">👁 Preview</a>
+    <!-- Animation Management (Full Width) -->
+    <div class="comic-panel p-6 comic-burst mb-6">
+      <h3 class="text-3xl mb-4 text-purple-700">📼 ANIMATION</h3>
+      <div class="flex flex-wrap gap-3">
+        <select id="animSel" class="flex-1 min-w-[200px]"></select>
+        <input id="animName" placeholder="Animation name" class="flex-1 min-w-[200px]" />
+        <button id="animNew" class="btn-primary">+ NEW</button>
+        <button id="animSaveAs" class="btn-success">SAVE AS</button>
+        <button id="save" class="btn-success">💾 SAVE <kbd class="ml-1 text-xs opacity-70">(Ctrl+S)</kbd></button>
+        <button id="export" class="btn-warning">📦 EXPORT</button>
+        <button id="animSetActive" class="btn-primary">✓ SET ACTIVE</button>
+        <button id="animDelete" class="btn-danger">🗑️ DELETE</button>
       </div>
     </div>
 
-    <!-- Main Layout -->
-    <div class="main-layout">
-      <!-- Left: Canvas and Timeline -->
-      <div class="canvas-area">
-        <!-- Drawing Tools -->
-        <div class="toolbar-section">
-          <h3>Drawing Tools</h3>
-          <span class="seg">
-            <button id="modePaint" class="active" type="button">✏️ Paint</button>
-            <button id="modeErase" type="button">🧹 Erase</button>
-            <button id="modeSpray" type="button">💨 Spray</button>
-            <button id="modeFill" type="button">🪣 Fill</button>
-            <button id="modeLine" type="button">📏 Line</button>
-            <button id="modeRect" type="button">▭ Rectangle</button>
-            <button id="modeCircle" type="button">⭕ Circle</button>
-            <button id="modeSelect" type="button">⬚ Select</button>
-          </span>
-          <button id="undo" title="Undo (Ctrl+Z)">↶ Undo</button>
-          <button id="redo" title="Redo (Ctrl+Y)">↷ Redo</button>
-          <span class="range" id="brushSizeControl">
-            <label for="brushSize">Size</label>
-            <input id="brushSize" type="range" min="1" max="8" value="1" />
-          </span>
-          <span class="seg" id="brushShapeControl">
-            <button id="brushCircle" class="active" type="button">⬤ Circle</button>
-            <button id="brushSquare" type="button">⬛ Square</button>
-            <button id="brushTriangle" type="button">▲ Triangle</button>
-            <button id="brushCustom" type="button">✨ Custom</button>
-          </span>
-          <label id="fillToggle" style="display:none">
-            <input id="fillShapes" type="checkbox" />
-            Fill shapes
-          </label>
-          <label>
-            <input id="pixelPerfect" type="checkbox" />
-            Pixel Perfect
-          </label>
-          <select id="customBrushSel" style="min-width:140px;display:none">
-            <option value="">Select custom brush...</option>
-          </select>
-          <button id="saveSelection" style="display:none;background:#f90;color:white;border:1px solid #e80">💾 Save as Brush</button>
-          <button id="moveSelection" style="display:none;background:#09e;color:white;border:1px solid #07c">🔄 Move</button>
-          <button id="copySelection" style="display:none;background:#0b5;color:white;border:1px solid #0a4">📋 Copy</button>
-          <button id="flipHSelection" style="display:none;background:#6c5ce7;color:white;border:1px solid #5b4dd6">↔️ Flip H</button>
-          <button id="flipVSelection" style="display:none;background:#6c5ce7;color:white;border:1px solid #5b4dd6">↕️ Flip V</button>
-          <button id="rotate90Selection" style="display:none;background:#a29bfe;color:white;border:1px solid #8b84eb">↻ Rotate 90°</button>
-          <button id="clearSelectionBtn" style="display:none;background:#888;color:white;border:1px solid #666">✕ Clear</button>
+    <!-- Main Canvas Area with Photoshop-style sidebar -->
+    <div class="flex gap-6">
+      <!-- Left Toolbar (Photoshop style) -->
+      <div class="comic-panel p-3 flex flex-col gap-2" style="width: 60px;">
+        <h3 class="text-sm font-bold text-center mb-2" style="writing-mode: vertical-rl; transform: rotate(180deg); font-family: 'Bangers', cursive;">TOOLS</h3>
+        <button id="modePaint" class="active w-full aspect-square text-2xl p-2 relative" title="Paint (P)">✏️<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">P</span></button>
+        <button id="modeErase" class="w-full aspect-square text-2xl p-2 relative" title="Erase (E)">🧹<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">E</span></button>
+        <button id="modeSpray" class="w-full aspect-square text-2xl p-2 relative" title="Spray (S)">💨<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">S</span></button>
+        <button id="modeFill" class="w-full aspect-square text-2xl p-2 relative" title="Fill (F)">🪣<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">F</span></button>
+        <button id="modeLine" class="w-full aspect-square text-2xl p-2 relative" title="Line (L)">📏<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">L</span></button>
+        <button id="modeRect" class="w-full aspect-square text-2xl p-2 relative" title="Rectangle (R)">▭<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">R</span></button>
+        <button id="modeCircle" class="w-full aspect-square text-2xl p-2 relative" title="Circle (C)">⭕<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">C</span></button>
+        <button id="modeSelect" class="w-full aspect-square text-2xl p-2 relative" title="Select (V)">⬚<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">V</span></button>
+        <div class="border-t-2 border-black my-2"></div>
+        <button id="undo" class="w-full aspect-square text-xl p-2" title="Undo (Ctrl+Z)">↶</button>
+        <button id="redo" class="w-full aspect-square text-xl p-2" title="Redo (Ctrl+Y)">↷</button>
+      </div>
+
+      <!-- Center: Canvas and Timeline -->
+      <div class="flex-1 flex flex-col gap-6">
+        <!-- Tool Options Bar -->
+        <div class="comic-panel p-4 comic-burst">
+          <h3 class="text-2xl mb-3 text-red-700">⚙️ TOOL OPTIONS</h3>
+          <div class="flex flex-wrap gap-3 items-center">
+            <div id="brushSizeControl" class="flex items-center gap-2">
+              <label class="font-bold">SIZE: <kbd class="text-xs opacity-70">[/]</kbd></label>
+              <input id="brushSize" type="range" min="1" max="8" value="1" class="w-32" />
+            </div>
+            <div id="brushShapeControl" class="flex gap-2">
+              <button id="brushCircle" class="active text-xl">⬤</button>
+              <button id="brushSquare" class="text-xl">⬛</button>
+              <button id="brushTriangle" class="text-xl">▲</button>
+              <button id="brushCustom" class="text-xl">✨</button>
+            </div>
+            <label id="fillToggle" style="display:none" class="flex items-center gap-2">
+              <input id="fillShapes" type="checkbox" />
+              <span class="font-bold">FILL</span>
+            </label>
+            <label class="flex items-center gap-2">
+              <input id="pixelPerfect" type="checkbox" />
+              <span class="font-bold">PIXEL PERFECT</span>
+            </label>
+            <div class="border-l-2 border-black mx-2 h-6"></div>
+            <label class="flex items-center gap-2">
+              <input id="onionEnable" type="checkbox" />
+              <span class="font-bold">👻 ONION SKIN</span>
+            </label>
+            <label class="flex items-center gap-2">
+              <span class="font-bold">PREV:</span>
+              <input id="onionPrev" type="number" min="0" max="2" value="1" class="w-16" />
+            </label>
+            <label class="flex items-center gap-2">
+              <span class="font-bold">NEXT:</span>
+              <input id="onionNext" type="number" min="0" max="2" value="0" class="w-16" />
+            </label>
+            <select id="customBrushSel" class="min-w-[180px]" style="display:none">
+              <option value="">Select brush...</option>
+            </select>
+            <button id="saveSelection" style="display:none" class="btn-warning">💾 SAVE BRUSH</button>
+            <button id="moveSelection" style="display:none" class="btn-primary">🔄 MOVE</button>
+            <button id="copySelection" style="display:none" class="btn-success">📋 COPY</button>
+            <button id="flipHSelection" style="display:none" class="btn-purple">↔️ FLIP H</button>
+            <button id="flipVSelection" style="display:none" class="btn-purple">↕️ FLIP V</button>
+            <button id="rotate90Selection" style="display:none" class="btn-purple">↻ ROTATE</button>
+            <button id="clearSelectionBtn" style="display:none">✕ CLEAR</button>
+          </div>
         </div>
 
         <!-- Canvas -->
-        <div style="display:flex; gap:12px; align-items:flex-start">
-          <div id="grid" class="grid"></div>
-          <span class="badge" id="sizeBadge" style="color:#666"></span>
+        <div class="comic-panel p-6" style="min-height: 400px;">
+          <div class="flex gap-4 items-center justify-center h-full">
+            <div id="grid" class="grid"></div>
+            <span id="sizeBadge" class="font-bold text-2xl" style="font-family: 'Bangers', cursive;"></span>
+          </div>
         </div>
 
         <!-- Frame Controls -->
-        <div class="toolbar-section">
-          <h3>Frame Controls</h3>
-          <button id="addFrame">+ Add Frame</button>
-          <button id="dupFrame">📋 Duplicate</button>
-          <button id="delFrame" style="background:#ff6b6b;color:white;border:1px solid #e63946">🗑️ Delete</button>
-          <label style="display:inline-flex; gap:6px; align-items:center">
-            Duration (ms)
-            <input id="dur" type="number" min="10" step="10" value="300" style="width:80px; padding:4px 6px" />
-          </label>
-        </div>
-
-        <!-- Timeline -->
-        <div style="background:#fff; padding:12px; border-radius:8px; border:1px solid #ddd">
-          <h3 style="margin:0 0 8px; font-size:13px; font-weight:600; color:#333">Timeline</h3>
-          <div class="timeline" id="timeline"></div>
-        </div>
-
-        <!-- Advanced Options -->
-        <details style="background:#fff; padding:12px; border-radius:8px; border:1px solid #ddd">
-          <summary style="cursor:pointer; font-weight:600; color:#333; margin-bottom:8px">Advanced Options</summary>
-          <div style="display:flex; flex-direction:column; gap:12px; margin-top:12px">
-            <!-- Onion Skin -->
-            <div style="padding:8px; background:#efe; border-radius:6px; border:1px solid #cfc">
-              <strong style="font-size:12px; display:block; margin-bottom:6px">🧅 Onion Skinning</strong>
-              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
-                <label style="display:inline-flex; gap:4px; align-items:center">
-                  <input id="onionEnable" type="checkbox" />
-                  Enable
-                </label>
-                <label style="display:inline-flex; gap:4px; align-items:center">
-                  Prev frames
-                  <input id="onionPrev" type="number" min="0" max="2" value="1" style="width:50px; padding:4px" />
-                </label>
-                <label style="display:inline-flex; gap:4px; align-items:center">
-                  Next frames
-                  <input id="onionNext" type="number" min="0" max="2" value="0" style="width:50px; padding:4px" />
-                </label>
-              </div>
-            </div>
-
-            <!-- Text Overlay -->
-            <div style="padding:8px; background:#eef; border-radius:6px; border:1px solid #cde">
-              <strong style="font-size:12px; display:block; margin-bottom:6px">📝 Text Overlay Feed</strong>
-              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
-                <input id="textUrl" placeholder="https://... (text or JSON)" style="padding:4px 6px; flex:1; min-width:200px" />
-                <label style="display:inline-flex; gap:4px; align-items:center">
-                  Field
-                  <input id="textField" placeholder="message" style="padding:4px 6px; width:100px" />
-                </label>
-                <label style="display:inline-flex; gap:4px; align-items:center">
-                  Interval (ms)
-                  <input id="textInt" type="number" min="1000" step="500" value="30000" style="width:90px; padding:4px" />
-                </label>
-                <label style="display:inline-flex; gap:4px; align-items:center">
-                  <input id="textEnable" type="checkbox" />
-                  Enable
-                </label>
-                <button id="textSave">Save</button>
-              </div>
+        <div class="comic-panel p-6 comic-burst">
+          <h3 class="text-3xl mb-4 text-green-700">🎞️ FRAME CONTROLS & PLAYBACK</h3>
+          
+          <!-- Frame Management -->
+          <div class="flex flex-wrap gap-3 items-center mb-4">
+            <button id="addFrame" class="btn-success">+ ADD FRAME <kbd class="ml-1 text-xs opacity-70">(I)</kbd></button>
+            <button id="dupFrame" class="btn-primary">📋 DUPLICATE <kbd class="ml-1 text-xs opacity-70">(D)</kbd></button>
+            <button id="delFrame" class="btn-danger">🗑️ DELETE <kbd class="ml-1 text-xs opacity-70">(Del)</kbd></button>
+            <div class="flex items-center gap-2">
+              <label class="font-bold">DURATION:</label>
+              <input id="dur" type="number" min="10" value="300" class="w-24" />
+              <span class="font-bold">ms</span>
             </div>
           </div>
-        </details>
-      </div>
-
-      <!-- Right Sidebar: Animation List -->
-      <div class="sidebar">
-        <div style="background:#fff; padding:12px; border-radius:8px; border:1px solid #ddd; height:100%">
-          <h3 style="margin:0 0 12px; font-size:14px; font-weight:600; color:#333">📁 Your Animations</h3>
-          <div id="animList" style="display:flex; flex-direction:column; gap:6px; max-height:calc(100vh - 200px); overflow:auto"></div>
+          
+          <!-- Playback Controls -->
+          <div class="flex flex-wrap gap-3 items-center mb-4 pb-4 border-b-4 border-black border-dashed">
+            <button id="play" class="btn-success">▶ PLAY <kbd class="ml-1 text-xs opacity-70">(Space)</kbd></button>
+            <button id="stop" class="btn-danger">■ STOP <kbd class="ml-1 text-xs opacity-70">(Space)</kbd></button>
+            <div class="flex items-center gap-3">
+              <label class="font-bold text-lg">SPEED:</label>
+              <input id="playSpeed" type="range" min="10" max="200" value="100" class="w-40" />
+              <span id="speedLabel" class="font-bold text-xl min-w-[60px]">100%</span>
+            </div>
+            <a href="/view?scene=anim" target="_blank" class="btn-purple no-underline">👁 PREVIEW</a>
+          </div>
+          
+          <!-- Timeline -->
+          <div id="timeline" class="timeline"></div>
         </div>
       </div>
+    </div>
     </div>
     
     <script>
@@ -611,11 +680,6 @@ function createHandler() {
       const onionEnableEl = document.getElementById('onionEnable');
       const onionPrevEl = document.getElementById('onionPrev');
       const onionNextEl = document.getElementById('onionNext');
-      const textUrlEl = document.getElementById('textUrl');
-      const textFieldEl = document.getElementById('textField');
-      const textIntEl = document.getElementById('textInt');
-      const textEnableEl = document.getElementById('textEnable');
-      const textSaveBtn = document.getElementById('textSave');
       const animSel = document.getElementById('animSel');
       const animNameInput = document.getElementById('animName');
       const pixelPerfectEl = document.getElementById('pixelPerfect');
@@ -630,7 +694,6 @@ function createHandler() {
       let brushMode = 'paint'; // 'paint' | 'erase' | 'spray' | 'select' | 'fill' | 'line' | 'rect' | 'circle'
       let brushShape = 'circle'; // 'circle' | 'square' | 'triangle' | 'custom'
       let currentName = '';
-      let textMeta = { enable:false, url:'', field:'', intervalMs:30000 };
       let onionEnabled = false;
       let onionPrev = 1;
       let onionNext = 0;
@@ -1007,14 +1070,17 @@ function createHandler() {
       }
       
       function renderGrid(){
+        console.log('renderGrid called - W:', W, 'H:', H, 'grid element:', grid);
         grid.style.gridTemplateColumns = 'repeat(' + W + ',12px)';
         grid.style.position = 'relative';
         grid.innerHTML = '';
         const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+        console.log('Creating', W*H, 'cells');
         for(let i=0;i<W*H;i++){
           const d = document.createElement('div'); d.className = 'cell' + (arr[i]?' on':''); d.dataset.idx = String(i);
           grid.appendChild(d);
         }
+        console.log('Grid children count:', grid.children.length);
         
         // Add transparent overlay to handle mouse events over gaps
         const overlay = document.createElement('div');
@@ -1516,10 +1582,10 @@ function createHandler() {
           tl.appendChild(t);
         });
       }
-      async function loadState(name){ try{ const r = await fetch('/anim/state' + (name?('?name='+encodeURIComponent(name)):'') ); const j = await r.json(); if (j && Array.isArray(j.frames)) { if (j.w && j.h){ W=j.w; H=j.h; } frames = j.frames.map(fr=>({ dur: Number(fr.durationMs)||300, arr: arrOf(String(fr.bits||'')) })); if (!frames.length) frames=[{ dur:300, arr:new Array(W*H).fill(false) }]; idx = Math.min(idx, frames.length-1); durEl.value=String(frames[idx].dur); currentName = String(j.name||'') || currentName; textMeta = { enable: !!(j.text && j.text.enable), url: String((j.text && j.text.url) || ''), field: String((j.text && j.text.field) || ''), intervalMs: Math.max(1000, Number(j.text && j.text.intervalMs) || 30000) }; textUrlEl.value = textMeta.url; textFieldEl.value = textMeta.field; textIntEl.value = String(textMeta.intervalMs); textEnableEl.checked = !!textMeta.enable; } }catch{ frames=[{ dur:300, arr:new Array(W*H).fill(false) }]; idx=0; }
+      async function loadState(name){ try{ const r = await fetch('/anim/state' + (name?('?name='+encodeURIComponent(name)):'') ); const j = await r.json(); if (j && Array.isArray(j.frames)) { if (j.w && j.h){ W=j.w; H=j.h; } frames = j.frames.map(fr=>({ dur: Number(fr.durationMs)||300, arr: arrOf(String(fr.bits||'')) })); if (!frames.length) frames=[{ dur:300, arr:new Array(W*H).fill(false) }]; idx = Math.min(idx, frames.length-1); durEl.value=String(frames[idx].dur); currentName = String(j.name||'') || currentName; } }catch{ frames=[{ dur:300, arr:new Array(W*H).fill(false) }]; idx=0; }
         undoStack = []; redoStack = []; updateUndoRedoButtons();
         renderGrid(); renderTimeline(); }
-      async function saveState(name){ const payload = { w: W, h: H, frames: frames.map(f=>({ bits: bitsOf(f.arr), durationMs: f.dur })), text: { enable: !!textEnableEl.checked, url: String(textUrlEl.value||'').trim(), field: String(textFieldEl.value||'').trim(), intervalMs: Math.max(1000, Number(textIntEl.value)||30000) } }; const q = name?('?name='+encodeURIComponent(name)) : ''; try{ await fetch('/anim/state'+q, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }); }catch{} }
+      async function saveState(name){ const payload = { w: W, h: H, frames: frames.map(f=>({ bits: bitsOf(f.arr), durationMs: f.dur })) }; const q = name?('?name='+encodeURIComponent(name)) : ''; try{ await fetch('/anim/state'+q, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }); }catch{} }
       document.getElementById('addFrame').onclick = ()=>{ frames.splice(idx+1, 0, { dur: Number(durEl.value)||300, arr: new Array(W*H).fill(false) }); idx++; renderTimeline(); renderGrid(); };
       document.getElementById('dupFrame').onclick = ()=>{ const cur = frames[idx]; frames.splice(idx+1, 0, { dur: cur.dur, arr: cur.arr.slice() }); idx++; renderTimeline(); renderGrid(); };
       document.getElementById('delFrame').onclick = ()=>{ if (!frames.length) return; frames.splice(idx,1); if (!frames.length) frames.push({ dur:300, arr:new Array(W*H).fill(false) }); idx = Math.min(idx, frames.length-1); renderTimeline(); renderGrid(); };
@@ -1533,7 +1599,6 @@ function createHandler() {
         a.download = n + '.js';
         a.click();
       };
-      textSaveBtn.onclick = ()=>{ const n = String(animSel.value||'').trim(); saveState(n||currentName); };
       let playTimer = 0;
       document.getElementById('play').onclick = ()=>{ 
         if (playing) return; 
@@ -1568,6 +1633,11 @@ function createHandler() {
       
       // Keyboard shortcuts for undo/redo
       document.addEventListener('keydown', (e) => {
+        // Ignore shortcuts when typing in input fields
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+          return;
+        }
+        
         // Ctrl+Z or Cmd+Z for undo
         if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
           e.preventDefault();
@@ -1577,6 +1647,149 @@ function createHandler() {
         if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
           e.preventDefault();
           redo();
+        }
+        // Ctrl+S or Cmd+S for save
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+          e.preventDefault();
+          const n = String(animSel.value||'').trim();
+          saveState(n||currentName);
+        }
+        
+        // < or , key for previous frame
+        if ((e.key === '<' || e.key === ',') && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          if (idx > 0) {
+            idx--;
+            durEl.value = String(frames[idx].dur);
+            renderTimeline();
+            renderGrid();
+          }
+        }
+        // > or . key for next frame
+        if ((e.key === '>' || e.key === '.') && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          if (idx < frames.length - 1) {
+            idx++;
+            durEl.value = String(frames[idx].dur);
+            renderTimeline();
+            renderGrid();
+          }
+        }
+        
+        // Space to play/stop animation
+        if (e.key === ' ' || e.key === 'Spacebar') {
+          e.preventDefault();
+          if (playing) {
+            // Stop
+            playing = false;
+            try { clearTimeout(playTimer); } catch {}
+          } else {
+            // Play
+            playing = true;
+            function step() {
+              if (!playing) return;
+              idx = (idx + 1) % frames.length;
+              durEl.value = String(frames[idx].dur);
+              renderTimeline();
+              renderGrid();
+              const adjustedDuration = Math.max(10, Math.floor(frames[idx].dur * (100 / playSpeed)));
+              playTimer = setTimeout(step, adjustedDuration);
+            }
+            const adjustedDuration = Math.max(10, Math.floor(frames[idx].dur * (100 / playSpeed)));
+            playTimer = setTimeout(step, adjustedDuration);
+          }
+        }
+        
+        // 'i' to insert/add new frame after current
+        if (e.key === 'i' && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          frames.splice(idx + 1, 0, { dur: Number(durEl.value) || 300, arr: new Array(W * H).fill(false) });
+          idx++;
+          renderTimeline();
+          renderGrid();
+        }
+        
+        // 'd' to duplicate current frame
+        if (e.key === 'd' && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          const cur = frames[idx];
+          frames.splice(idx + 1, 0, { dur: cur.dur, arr: cur.arr.slice() });
+          idx++;
+          renderTimeline();
+          renderGrid();
+        }
+        
+        // Delete or Backspace to delete current frame
+        if ((e.key === 'Delete' || e.key === 'Backspace') && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          if (!frames.length) return;
+          frames.splice(idx, 1);
+          if (!frames.length) frames.push({ dur: 300, arr: new Array(W * H).fill(false) });
+          idx = Math.min(idx, frames.length - 1);
+          renderTimeline();
+          renderGrid();
+        }
+        
+        // 'p' for Paint tool
+        if (e.key === 'p' && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          modePaintBtn.click();
+        }
+        
+        // 'e' for Erase tool
+        if (e.key === 'e' && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          modeEraseBtn.click();
+        }
+        
+        // 'f' for Fill tool
+        if (e.key === 'f' && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          modeFillBtn.click();
+        }
+        
+        // 'l' for Line tool
+        if (e.key === 'l' && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          modeLineBtn.click();
+        }
+        
+        // 'r' for Rectangle tool
+        if (e.key === 'r' && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          modeRectBtn.click();
+        }
+        
+        // 'c' for Circle tool
+        if (e.key === 'c' && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          modeCircleBtn.click();
+        }
+        
+        // 's' for Spray tool (only without Ctrl/Cmd)
+        if (e.key === 's' && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          modeSprayBtn.click();
+        }
+        
+        // 'v' for Select tool
+        if (e.key === 'v' && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          modeSelectBtn.click();
+        }
+        
+        // '[' to decrease brush size
+        if (e.key === '[' && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          brushSize = Math.max(1, brushSize - 1);
+          brushSizeEl.value = String(brushSize);
+        }
+        
+        // ']' to increase brush size
+        if (e.key === ']' && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          brushSize = Math.min(10, brushSize + 1);
+          brushSizeEl.value = String(brushSize);
         }
       });
       
@@ -1764,6 +1977,7 @@ function createHandler() {
             const x = i % W;
             const y = Math.floor(i / W);
             drawLine(lineStart.x, lineStart.y, x, y, true); // Commit the line
+            renderGrid(); // Refresh grid to remove preview artifacts
           }
           lineStart = null;
         }
@@ -1777,6 +1991,7 @@ function createHandler() {
             const x = i % W;
             const y = Math.floor(i / W);
             drawRect(shapeStart.x, shapeStart.y, x, y, fillShapes, true); // Commit the rect
+            renderGrid(); // Refresh grid to remove preview artifacts
           }
           shapeStart = null;
         }
@@ -1790,6 +2005,7 @@ function createHandler() {
             const y = Math.floor(i / W);
             const radius = Math.round(Math.sqrt(Math.pow(x - shapeStart.x, 2) + Math.pow(y - shapeStart.y, 2)));
             drawCircle(shapeStart.x, shapeStart.y, radius, fillShapes, true); // Commit the circle
+            renderGrid(); // Refresh grid to remove preview artifacts
           }
           shapeStart = null;
         }
