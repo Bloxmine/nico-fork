@@ -276,12 +276,6 @@ function renderScene({ scene, ctx, width, height, elapsedTime }) {
 }
 
 ticker.start(async ({ deltaTime, elapsedTime }) => {
-	// Clear the console
-	console.clear();
-	console.time("Write frame");
-	console.log(`Rendering a ${width}x${height} canvas`);
-	console.log("View at http://localhost:3000/view");
-
 	ctx.clearRect(0, 0, width, height);
 
 	// Fill the canvas with a black background
@@ -688,9 +682,8 @@ ticker.start(async ({ deltaTime, elapsedTime }) => {
 	try { globalThis.__framePNG = canvas.toBuffer("image/png"); } catch {}
 
 	if (IS_DEV) {
-		// Save the canvas as a PNG file (dev convenience)
-		const filename = path.join(outputDir, "frame.png");
-		try { fs.writeFileSync(filename, globalThis.__framePNG); } catch {}
+		// Dev mode - PNG is kept in memory for /frame.png endpoint
+		// No file writing to avoid heavy I/O
 	} else {
 		const imageData = ctx.getImageData(0, 0, display.width, display.height);
 		display.setImageData(imageData);
@@ -698,9 +691,5 @@ ticker.start(async ({ deltaTime, elapsedTime }) => {
 			display.flush();
 		}
 	}
-
-	console.log(`Eslapsed time: ${(elapsedTime / 1000).toFixed(2)}s`);
-	console.log(`Delta time: ${deltaTime.toFixed(2)}ms`);
-	console.timeEnd("Write frame");
 });
 

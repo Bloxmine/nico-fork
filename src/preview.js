@@ -340,8 +340,9 @@ function createHandler() {
                 res.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "no-store" });
                 res.end(buf);
             } else {
-                res.writeHead(200, { "Content-Type": "image/png" });
-                res.end(fs.readFileSync("./output/frame.png"));
+                // No frame available yet
+                res.writeHead(404, { "Content-Type": "text/plain" });
+                res.end("No frame available");
             }
         } else if (parsed.pathname === "/frame.bits") {
             const bm = globalThis.__frameBitmap;
@@ -436,10 +437,21 @@ function createHandler() {
       .cell.next:not(.on){ background: rgba(100, 255, 100, 0.3); }
       
       .timeline{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:12px; }
-      .frameThumb{ display:grid; grid-template-columns: repeat(var(--w), 2px); grid-auto-rows:2px; gap:1px; padding:4px; background:#222; border:3px solid #000; cursor:pointer; transition: transform 0.2s; box-shadow: 3px 3px 0 rgba(0,0,0,0.3); }
+      .frameThumb{ display:grid; grid-template-columns: repeat(var(--w), 2px); grid-auto-rows:2px; gap:1px; padding:4px; background:#222; border:3px solid #000; cursor:pointer; transition: all 0.3s ease; box-shadow: 3px 3px 0 rgba(0,0,0,0.3); }
       .frameThumb:hover { transform: scale(1.1) rotate(-2deg); }
       .frameThumb .p{ width:2px; height:2px; background:#000; }
       .frameThumb .p.on{ background:#fff; }
+      
+      /* Frame deletion animation */
+      .frameThumb.deleting { 
+        animation: frameDelete 0.5s ease-out forwards;
+        pointer-events: none;
+      }
+      @keyframes frameDelete {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.2) rotate(10deg); opacity: 0.5; }
+        100% { transform: scale(0) rotate(45deg); opacity: 0; }
+      }
       
       button { font-family: 'Comic Neue', cursive; font-weight: bold; padding: 8px 16px; border: 3px solid #000; background: linear-gradient(180deg, #fff 0%, #e0e0e0 100%); color: #000; cursor: pointer; transition: all 0.1s; box-shadow: 4px 4px 0 rgba(0,0,0,0.3); text-transform: uppercase; font-size: 12px; }
       button:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 rgba(0,0,0,0.3); }
@@ -477,6 +489,24 @@ function createHandler() {
       }
       button.w-full.aspect-square:hover { 
         transform: scale(1.1); 
+      }
+      button.w-full.aspect-square.active {
+        animation: wiggle 1s ease;
+      }
+      
+      /* Wiggle animation for tool selection */
+      @keyframes wiggle {
+        0%, 100% { transform: rotate(0deg); }
+        10% { transform: rotate(-10deg) scale(1.1); }
+        20% { transform: rotate(10deg) scale(1.1); }
+        30% { transform: rotate(-10deg) scale(1.1); }
+        40% { transform: rotate(10deg) scale(1.1); }
+        50% { transform: rotate(-5deg) scale(1.1); }
+        60% { transform: rotate(5deg) scale(1.1); }
+        70% { transform: rotate(-3deg) scale(1.1); }
+        80% { transform: rotate(3deg) scale(1.1); }
+        90% { transform: rotate(0deg) scale(1.1); }
+      }
         z-index: 10;
       }
       button.w-full.aspect-square.active {
@@ -602,10 +632,12 @@ function createHandler() {
         </div>
 
         <!-- Canvas -->
-        <div class="comic-panel p-6" style="min-height: 400px;">
+        <div class="comic-panel p-6" style="min-height: 400px; position: relative;">
           <div class="flex gap-4 items-center justify-center h-full">
             <div id="grid" class="grid"></div>
           </div>
+          <!-- Current frame number indicator -->
+          <div id="currentFrameNum" style="position:absolute; bottom:10px; right:10px; background:#000; color:#fff; font-size:16px; padding:4px 8px; border-radius:4px; font-weight:bold; font-family: 'Comic Neue', cursive; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>
         </div>
 
         <!-- Frame Controls -->
@@ -1081,6 +1113,12 @@ function createHandler() {
           grid.appendChild(d);
         }
         console.log('Grid children count:', grid.children.length);
+        
+        // Update current frame number display
+        const frameNumEl = document.getElementById('currentFrameNum');
+        if (frameNumEl) {
+          frameNumEl.textContent = 'Frame ' + (idx + 1) + '/' + frames.length;
+        }
         
         // Add transparent overlay to handle mouse events over gaps
         const overlay = document.createElement('div');
@@ -1562,11 +1600,18 @@ function createHandler() {
         tl.innerHTML='';
         frames.forEach((f, i)=>{
           const t = document.createElement('div'); t.className='frameThumb'; t.style.setProperty('--w', String(W)); t.title = f.dur + 'ms';
+          t.style.position = 'relative';
           for(let y=0;y<H;y++){
             for(let x=0;x<W;x++){
               const p = document.createElement('div'); p.className='p' + (f.arr[y*W+x]?' on':''); t.appendChild(p);
             }
           }
+          // Add frame number overlay
+          const frameNum = document.createElement('div');
+          frameNum.textContent = String(i + 1);
+          frameNum.style.cssText = 'position:absolute; top:2px; right:2px; background:#000; color:#fff; font-size:8px; padding:1px 3px; border-radius:2px; pointer-events:none; font-weight:bold; line-height:1;';
+          t.appendChild(frameNum);
+          
           t.style.outline = i===idx ? '2px solid #0af' : '2px solid transparent';
           t.onclick = ()=>{ 
             idx=i; 
@@ -1587,7 +1632,27 @@ function createHandler() {
       async function saveState(name){ const payload = { w: W, h: H, frames: frames.map(f=>({ bits: bitsOf(f.arr), durationMs: f.dur })) }; const q = name?('?name='+encodeURIComponent(name)) : ''; try{ await fetch('/anim/state'+q, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }); }catch{} }
       document.getElementById('addFrame').onclick = ()=>{ frames.splice(idx+1, 0, { dur: Number(durEl.value)||300, arr: new Array(W*H).fill(false) }); idx++; renderTimeline(); renderGrid(); };
       document.getElementById('dupFrame').onclick = ()=>{ const cur = frames[idx]; frames.splice(idx+1, 0, { dur: cur.dur, arr: cur.arr.slice() }); idx++; renderTimeline(); renderGrid(); };
-      document.getElementById('delFrame').onclick = ()=>{ if (!frames.length) return; frames.splice(idx,1); if (!frames.length) frames.push({ dur:300, arr:new Array(W*H).fill(false) }); idx = Math.min(idx, frames.length-1); renderTimeline(); renderGrid(); };
+      document.getElementById('delFrame').onclick = ()=>{ 
+        if (!frames.length) return; 
+        // Add deletion animation
+        const thumbs = tl.querySelectorAll('.frameThumb');
+        if (thumbs[idx]) {
+          thumbs[idx].classList.add('deleting');
+          setTimeout(() => {
+            frames.splice(idx,1); 
+            if (!frames.length) frames.push({ dur:300, arr:new Array(W*H).fill(false) }); 
+            idx = Math.min(idx, frames.length-1); 
+            renderTimeline(); 
+            renderGrid();
+          }, 300); // Match animation duration
+        } else {
+          frames.splice(idx,1); 
+          if (!frames.length) frames.push({ dur:300, arr:new Array(W*H).fill(false) }); 
+          idx = Math.min(idx, frames.length-1); 
+          renderTimeline(); 
+          renderGrid();
+        }
+      };
       durEl.onchange = ()=>{ const v = Math.max(10, Number(durEl.value)||300); frames[idx].dur = v; renderTimeline(); };
       document.getElementById('save').onclick = ()=>{ const n = String(animSel.value||'').trim(); saveState(n||currentName); };
       document.getElementById('export').onclick = ()=>{ 
@@ -1814,59 +1879,66 @@ function createHandler() {
         updateGridCursor();
       }
       
+      // Helper function to trigger wiggle animation
+      function triggerWiggle(button) {
+        button.classList.remove('active');
+        void button.offsetWidth; // Force reflow
+        button.classList.add('active');
+      }
+      
       // Mode buttons
       modePaintBtn.onclick = ()=>{ 
         brushMode = 'paint'; 
-        modePaintBtn.classList.add('active'); 
+        triggerWiggle(modePaintBtn);
         [modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
         clearSelection();
         updateModeUI();
       };
       modeEraseBtn.onclick = ()=>{ 
         brushMode = 'erase'; 
-        modeEraseBtn.classList.add('active'); 
+        triggerWiggle(modeEraseBtn);
         [modePaintBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
         clearSelection();
         updateModeUI();
       };
       modeSprayBtn.onclick = ()=>{ 
         brushMode = 'spray'; 
-        modeSprayBtn.classList.add('active'); 
+        triggerWiggle(modeSprayBtn);
         [modePaintBtn, modeEraseBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
         clearSelection();
         updateModeUI();
       };
       modeFillBtn.onclick = ()=>{ 
         brushMode = 'fill'; 
-        modeFillBtn.classList.add('active'); 
+        triggerWiggle(modeFillBtn);
         [modePaintBtn, modeEraseBtn, modeSprayBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
         clearSelection();
         updateModeUI();
       };
       modeLineBtn.onclick = ()=>{ 
         brushMode = 'line'; 
-        modeLineBtn.classList.add('active'); 
+        triggerWiggle(modeLineBtn);
         [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeRectBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
         clearSelection();
         updateModeUI();
       };
       modeRectBtn.onclick = ()=>{ 
         brushMode = 'rect'; 
-        modeRectBtn.classList.add('active'); 
+        triggerWiggle(modeRectBtn);
         [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
         clearSelection();
         updateModeUI();
       };
       modeCircleBtn.onclick = ()=>{ 
         brushMode = 'circle'; 
-        modeCircleBtn.classList.add('active'); 
+        triggerWiggle(modeCircleBtn);
         [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
         clearSelection();
         updateModeUI();
       };
       modeSelectBtn.onclick = ()=>{ 
         brushMode = 'select'; 
-        modeSelectBtn.classList.add('active'); 
+        triggerWiggle(modeSelectBtn);
         [modePaintBtn, modeEraseBtn, modeSprayBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn].forEach(b => b.classList.remove('active'));
         updateModeUI();
       };
