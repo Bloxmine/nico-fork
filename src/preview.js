@@ -401,6 +401,8 @@ function createHandler() {
       .seg>button.active{ background:#0b5; color:#fff; }
       .range{ display:inline-flex; align-items:center; gap:6px; }
       input[type=range]{ width:120px; }
+      .cell.selecting{ outline:2px dashed #0af; outline-offset:-1px; }
+      .selection-box{ position:absolute; border:2px dashed #0af; background:rgba(0,170,255,0.1); pointer-events:none; z-index:100; }
     </style>
   </head>
   <body>
@@ -419,6 +421,11 @@ function createHandler() {
       <button id="dupFrame">Duplicate</button>
       <button id="delFrame" style="background:#ff6b6b;color:white;border:1px solid #e63946">🗑️ Delete Frame</button>
       <label>Duration ms <input id="dur" type="number" min="10" step="10" value="300" /></label>
+      <span class="range">
+        <label for="playSpeed">Speed</label>
+        <input id="playSpeed" type="range" min="10" max="200" value="100" />
+        <span id="speedLabel">100%</span>
+      </span>
       <button id="play">Play</button>
       <button id="stop">Stop</button>
       <button id="save">Save</button>
@@ -433,10 +440,16 @@ function createHandler() {
         <button id="brushCircle" class="active" type="button">Circle</button>
         <button id="brushSquare" type="button">Square</button>
         <button id="brushTriangle" type="button">Triangle</button>
+        <button id="brushCustom" type="button">Custom</button>
       </span>
+      <select id="customBrushSel" style="min-width:120px;display:none">
+        <option value="">Select brush...</option>
+      </select>
+      <button id="saveSelection" style="display:none;background:#f90;color:white;border:1px solid #e80">💾 Save as Brush</button>
       <span class="seg">
         <button id="modePaint" class="active" type="button">Paint</button>
         <button id="modeErase" type="button">Erase</button>
+        <button id="modeSelect" type="button">Select</button>
       </span>
       <div style="display:inline-flex; gap:6px; align-items:center; flex-wrap:wrap; padding:6px 8px; background:#efe; border-radius:8px; border:1px solid #cfc">
         <strong style="font-size:12px">Onion</strong>
@@ -476,6 +489,12 @@ function createHandler() {
       const brushCircleBtn = document.getElementById('brushCircle');
       const brushSquareBtn = document.getElementById('brushSquare');
       const brushTriangleBtn = document.getElementById('brushTriangle');
+      const brushCustomBtn = document.getElementById('brushCustom');
+      const customBrushSel = document.getElementById('customBrushSel');
+      const saveSelectionBtn = document.getElementById('saveSelection');
+      const modeSelectBtn = document.getElementById('modeSelect');
+      const playSpeedEl = document.getElementById('playSpeed');
+      const speedLabelEl = document.getElementById('speedLabel');
       const animListEl = document.getElementById('animList');
       const onionEnableEl = document.getElementById('onionEnable');
       const onionPrevEl = document.getElementById('onionPrev');
@@ -490,21 +509,50 @@ function createHandler() {
       let frames = [];
       let idx = 0;
       let playing = false;
+      let playSpeed = 100; // percentage
       let isMouseDown = false;
       let brushSize = 1; // radius in pixels
-      let brushMode = 'paint'; // 'paint' | 'erase'
-      let brushShape = 'circle'; // 'circle' | 'square' | 'triangle'
+      let brushMode = 'paint'; // 'paint' | 'erase' | 'select'
+      let brushShape = 'circle'; // 'circle' | 'square' | 'triangle' | 'custom'
       let currentName = '';
       let textMeta = { enable:false, url:'', field:'', intervalMs:30000 };
       let onionEnabled = false;
       let onionPrev = 1;
       let onionNext = 0;
+      let customBrushes = {}; // { name: { w, h, pattern: [] } }
+      let currentCustomBrush = null;
+      let selection = { active: false, startX: 0, startY: 0, endX: 0, endY: 0 };
+      let selectionBox = null;
       function bitsOf(arr){ return arr.map(v=>v?'1':'0').join(''); }
       function arrOf(bits){ const arr = new Array(W*H).fill(false); for(let i=0;i<arr.length && i<bits.length;i++){ arr[i] = bits.charAt(i)==='1'; } return arr; }
       function applyBrushAt(index){
+        if (brushMode === 'select') return; // Don't paint in select mode
         const arr = frames[idx]?.arr || new Array(W*H).fill(false);
         const cx = index % W;
         const cy = Math.floor(index / W);
+        
+        if (brushShape === 'custom' && currentCustomBrush) {
+          const b = customBrushes[currentCustomBrush];
+          if (!b) return;
+          const offsetX = Math.floor(b.w / 2);
+          const offsetY = Math.floor(b.h / 2);
+          for (let by = 0; by < b.h; by++) {
+            for (let bx = 0; bx < b.w; bx++) {
+              const nx = cx - offsetX + bx;
+              const ny = cy - offsetY + by;
+              if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+              const pi = ny * W + nx;
+              const brushPixel = b.pattern[by * b.w + bx];
+              if (brushPixel) {
+                arr[pi] = (brushMode === 'paint');
+                const el = grid.children[pi];
+                if (el) el.classList.toggle('on', arr[pi]);
+              }
+            }
+          }
+          return;
+        }
+        
         const r = Math.max(0, brushSize - 1);
         for (let dy = -r; dy <= r; dy++){
           for (let dx = -r; dx <= r; dx++){
@@ -533,16 +581,123 @@ function createHandler() {
       }
       function renderGrid(){
         grid.style.gridTemplateColumns = 'repeat(' + W + ',12px)';
+        grid.style.position = 'relative';
         grid.innerHTML = '';
         const arr = frames[idx]?.arr || new Array(W*H).fill(false);
         for(let i=0;i<W*H;i++){
           const d = document.createElement('div'); d.className = 'cell' + (arr[i]?' on':''); d.dataset.idx = String(i);
-          d.onmousedown = (e)=>{ e.preventDefault(); isMouseDown = true; applyBrushAt(i); };
-          d.onmouseover = (e)=>{ if (isMouseDown){ applyBrushAt(i); } };
+          d.onmousedown = (e)=>{ 
+            e.preventDefault(); 
+            isMouseDown = true; 
+            if (brushMode === 'select') {
+              const x = i % W;
+              const y = Math.floor(i / W);
+              selection.active = true;
+              selection.startX = x;
+              selection.startY = y;
+              selection.endX = x;
+              selection.endY = y;
+              createSelectionBox();
+            } else {
+              applyBrushAt(i); 
+            }
+          };
+          d.onmouseover = (e)=>{ 
+            if (isMouseDown){ 
+              if (brushMode === 'select') {
+                const x = i % W;
+                const y = Math.floor(i / W);
+                selection.endX = x;
+                selection.endY = y;
+                updateSelectionBox();
+              } else {
+                applyBrushAt(i); 
+              }
+            } 
+          };
           grid.appendChild(d);
         }
         sizeBadge.textContent = W + '×' + H;
         updateOnionSkins();
+      }
+      function createSelectionBox(){
+        if (!selectionBox) {
+          selectionBox = document.createElement('div');
+          selectionBox.className = 'selection-box';
+          grid.appendChild(selectionBox);
+        }
+        updateSelectionBox();
+      }
+      function updateSelectionBox(){
+        if (!selectionBox || !selection.active) return;
+        const minX = Math.min(selection.startX, selection.endX);
+        const maxX = Math.max(selection.startX, selection.endX);
+        const minY = Math.min(selection.startY, selection.endY);
+        const maxY = Math.max(selection.startY, selection.endY);
+        const cellSize = 12; // cell width/height
+        const gap = 2; // gap between cells
+        const left = minX * (cellSize + gap);
+        const top = minY * (cellSize + gap);
+        const width = (maxX - minX + 1) * (cellSize + gap) - gap;
+        const height = (maxY - minY + 1) * (cellSize + gap) - gap;
+        selectionBox.style.left = left + 'px';
+        selectionBox.style.top = top + 'px';
+        selectionBox.style.width = width + 'px';
+        selectionBox.style.height = height + 'px';
+        // Highlight selected cells
+        for (let i=0;i<grid.children.length;i++){
+          const el = grid.children[i];
+          if (el === selectionBox) continue;
+          const x = i % W;
+          const y = Math.floor(i / W);
+          if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
+            el.classList.add('selecting');
+          } else {
+            el.classList.remove('selecting');
+          }
+        }
+      }
+      function clearSelection(){
+        selection.active = false;
+        if (selectionBox && selectionBox.parentNode) {
+          selectionBox.parentNode.removeChild(selectionBox);
+          selectionBox = null;
+        }
+        for (let i=0;i<grid.children.length;i++){
+          grid.children[i].classList.remove('selecting');
+        }
+      }
+      function saveSelectionAsBrush(){
+        if (!selection.active) return;
+        const minX = Math.min(selection.startX, selection.endX);
+        const maxX = Math.max(selection.startX, selection.endX);
+        const minY = Math.min(selection.startY, selection.endY);
+        const maxY = Math.max(selection.startY, selection.endY);
+        const w = maxX - minX + 1;
+        const h = maxY - minY + 1;
+        const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+        const pattern = [];
+        for (let y = minY; y <= maxY; y++) {
+          for (let x = minX; x <= maxX; x++) {
+            pattern.push(arr[y * W + x]);
+          }
+        }
+        const name = prompt('Enter brush name:', 'Custom ' + (Object.keys(customBrushes).length + 1));
+        if (!name) return;
+        customBrushes[name] = { w, h, pattern };
+        updateCustomBrushDropdown();
+        clearSelection();
+        alert('Brush "' + name + '" saved! (' + w + 'x' + h + ')');
+      }
+      function updateCustomBrushDropdown(){
+        customBrushSel.innerHTML = '<option value="">Select brush...</option>';
+        Object.keys(customBrushes).forEach(name => {
+          const opt = document.createElement('option');
+          opt.value = name;
+          const b = customBrushes[name];
+          opt.textContent = name + ' (' + b.w + 'x' + b.h + ')';
+          customBrushSel.appendChild(opt);
+        });
       }
       function updateOnionSkins(){
         if (!grid) return;
@@ -604,8 +759,116 @@ function createHandler() {
       };
       textSaveBtn.onclick = ()=>{ const n = String(animSel.value||'').trim(); saveState(n||currentName); };
       let playTimer = 0;
-      document.getElementById('play').onclick = ()=>{ if (playing) return; playing = true; function step(){ if (!playing) return; idx = (idx + 1) % frames.length; durEl.value = String(frames[idx].dur); renderTimeline(); renderGrid(); playTimer = setTimeout(step, frames[idx].dur); } playTimer = setTimeout(step, frames[idx].dur); };
+      document.getElementById('play').onclick = ()=>{ 
+        if (playing) return; 
+        playing = true; 
+        function step(){ 
+          if (!playing) return; 
+          idx = (idx + 1) % frames.length; 
+          durEl.value = String(frames[idx].dur); 
+          renderTimeline(); 
+          renderGrid(); 
+          const adjustedDuration = Math.max(10, Math.floor(frames[idx].dur * (100 / playSpeed)));
+          playTimer = setTimeout(step, adjustedDuration); 
+        } 
+        const adjustedDuration = Math.max(10, Math.floor(frames[idx].dur * (100 / playSpeed)));
+        playTimer = setTimeout(step, adjustedDuration); 
+      };
       document.getElementById('stop').onclick = ()=>{ playing=false; try{ clearTimeout(playTimer); }catch{} };
+      
+      // Speed control
+      playSpeedEl.oninput = ()=>{ 
+        playSpeed = Number(playSpeedEl.value) || 100; 
+        speedLabelEl.textContent = playSpeed + '%';
+      };
+      
+      // Mode buttons
+      modePaintBtn.onclick = ()=>{ 
+        brushMode = 'paint'; 
+        modePaintBtn.classList.add('active'); 
+        modeEraseBtn.classList.remove('active'); 
+        modeSelectBtn.classList.remove('active');
+        clearSelection();
+        saveSelectionBtn.style.display = 'none';
+        customBrushSel.style.display = brushShape === 'custom' ? 'inline-block' : 'none';
+      };
+      modeEraseBtn.onclick = ()=>{ 
+        brushMode = 'erase'; 
+        modeEraseBtn.classList.add('active'); 
+        modePaintBtn.classList.remove('active'); 
+        modeSelectBtn.classList.remove('active');
+        clearSelection();
+        saveSelectionBtn.style.display = 'none';
+        customBrushSel.style.display = brushShape === 'custom' ? 'inline-block' : 'none';
+      };
+      modeSelectBtn.onclick = ()=>{ 
+        brushMode = 'select'; 
+        modeSelectBtn.classList.add('active'); 
+        modePaintBtn.classList.remove('active'); 
+        modeEraseBtn.classList.remove('active');
+        saveSelectionBtn.style.display = 'inline-block';
+        customBrushSel.style.display = 'none';
+        grid.style.cursor = 'crosshair';
+      };
+      
+      // Brush shape buttons
+      brushCircleBtn.onclick = ()=>{ 
+        brushShape = 'circle'; 
+        brushCircleBtn.classList.add('active'); 
+        brushSquareBtn.classList.remove('active'); 
+        brushTriangleBtn.classList.remove('active');
+        brushCustomBtn.classList.remove('active');
+        customBrushSel.style.display = 'none';
+      };
+      brushSquareBtn.onclick = ()=>{ 
+        brushShape = 'square'; 
+        brushSquareBtn.classList.add('active'); 
+        brushCircleBtn.classList.remove('active'); 
+        brushTriangleBtn.classList.remove('active');
+        brushCustomBtn.classList.remove('active');
+        customBrushSel.style.display = 'none';
+      };
+      brushTriangleBtn.onclick = ()=>{ 
+        brushShape = 'triangle'; 
+        brushTriangleBtn.classList.add('active'); 
+        brushCircleBtn.classList.remove('active'); 
+        brushSquareBtn.classList.remove('active');
+        brushCustomBtn.classList.remove('active');
+        customBrushSel.style.display = 'none';
+      };
+      brushCustomBtn.onclick = ()=>{ 
+        brushShape = 'custom'; 
+        brushCustomBtn.classList.add('active'); 
+        brushCircleBtn.classList.remove('active'); 
+        brushSquareBtn.classList.remove('active');
+        brushTriangleBtn.classList.remove('active');
+        customBrushSel.style.display = 'inline-block';
+        if (!currentCustomBrush && Object.keys(customBrushes).length > 0) {
+          currentCustomBrush = Object.keys(customBrushes)[0];
+          customBrushSel.value = currentCustomBrush;
+        }
+      };
+      
+      // Brush size
+      brushSizeEl.oninput = ()=>{ brushSize = Number(brushSizeEl.value) || 1; };
+      
+      // Custom brush selection
+      customBrushSel.onchange = ()=>{ 
+        currentCustomBrush = customBrushSel.value || null; 
+      };
+      
+      // Save selection as brush
+      saveSelectionBtn.onclick = ()=>{ saveSelectionAsBrush(); };
+      
+      // Mouse up handler
+      document.addEventListener('mouseup', ()=>{ 
+        isMouseDown = false; 
+        if (brushMode === 'select' && selection.active) {
+          // Selection complete - show save button
+          saveSelectionBtn.style.display = 'inline-block';
+        }
+      });
+      
       // Animation management
       function createPreviewGrid(container, Wsrc, Hsrc){
         const scale = 2; // 2px cells
@@ -705,16 +968,6 @@ function createHandler() {
       (async function init(){ await getLiveSize(); await refreshAnimList(); await loadState(); })();
       // Save on unload to persist quick edits
       window.addEventListener('beforeunload', ()=>{ try{ const n = String(animSel && animSel.value || ''); navigator.sendBeacon('/anim/state' + (n?('?name='+encodeURIComponent(n)):'') , new Blob([JSON.stringify({ w:W, h:H, frames: frames.map(f=>({ bits: bitsOf(f.arr), durationMs: f.dur })), text: { enable: !!textEnableEl.checked, url: String(textUrlEl.value||'').trim(), field: String(textFieldEl.value||'').trim(), intervalMs: Math.max(1000, Number(textIntEl.value)||30000) } })], { type:'application/json' })); }catch{} });
-      // Brush UI
-      brushSizeEl.addEventListener('input', ()=>{ brushSize = Math.max(1, Number(brushSizeEl.value)||1); });
-      modePaintBtn.addEventListener('click', ()=>{ brushMode = 'paint'; modePaintBtn.classList.add('active'); modeEraseBtn.classList.remove('active'); });
-      modeEraseBtn.addEventListener('click', ()=>{ brushMode = 'erase'; modeEraseBtn.classList.add('active'); modePaintBtn.classList.remove('active'); });
-      window.addEventListener('mouseup', ()=>{ isMouseDown = false; });
-      // Brush shape UI
-      function setShape(shape){ brushShape = shape; brushCircleBtn.classList.toggle('active', shape==='circle'); brushSquareBtn.classList.toggle('active', shape==='square'); brushTriangleBtn.classList.toggle('active', shape==='triangle'); }
-      brushCircleBtn.addEventListener('click', ()=> setShape('circle'));
-      brushSquareBtn.addEventListener('click', ()=> setShape('square'));
-      brushTriangleBtn.addEventListener('click', ()=> setShape('triangle'));
       // Onion skin UI
       onionEnableEl.addEventListener('change', ()=>{ onionEnabled = !!onionEnableEl.checked; updateOnionSkins(); });
       onionPrevEl.addEventListener('change', ()=>{ onionPrev = Math.max(0, Math.min(2, Number(onionPrevEl.value)||0)); updateOnionSkins(); });
