@@ -386,6 +386,8 @@ function createHandler() {
       .grid{ display:grid; grid-auto-rows:12px; gap:2px; background:#111; padding:6px; }
       .cell{ width:12px; height:12px; background:#000; border-radius:2px; cursor:pointer; }
       .cell.on{ background:#fff; }
+      /* Preview for line/shape tools */
+      .cell.preview{ outline:2px dotted #0af; outline-offset:-2px; z-index:10; }
       /* Onion skin ghosting */
       .cell.prev:not(.on){ background:#333; }
       .cell.next:not(.on){ background:#666; }
@@ -403,79 +405,163 @@ function createHandler() {
       input[type=range]{ width:120px; }
       .cell.selecting{ outline:2px dashed #0af; outline-offset:-1px; }
       .selection-box{ position:absolute; border:2px dashed #0af; background:rgba(0,170,255,0.1); pointer-events:none; z-index:100; }
+      .toolbar-section{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:8px 12px; background:#fff; border-radius:8px; border:1px solid #ddd; }
+      .toolbar-section h3{ margin:0; font-size:13px; font-weight:600; color:#333; min-width:100%; }
+      .main-layout{ display:grid; grid-template-columns: 1fr auto; gap:20px; margin-top:16px; }
+      .canvas-area{ display:flex; flex-direction:column; gap:12px; }
+      .sidebar{ min-width:280px; max-width:280px; display:flex; flex-direction:column; gap:12px; }
     </style>
   </head>
   <body>
-    <h2 style="margin:0 0 10px">Animation Maker</h2>
-    <div class="tools">
-      <span style="display:inline-flex; gap:6px; align-items:center; flex-wrap:wrap">
-        <label for="animSel">Animation:</label>
-        <select id="animSel"></select>
-        <input id="animName" placeholder="Name" style="padding:4px 6px; width:160px" />
-        <button id="animNew">New</button>
-        <button id="animSaveAs">Save as</button>
-        <button id="animDelete" style="background:#c92a2a;color:white;border:1px solid #a61e1e">🗑️ Delete Animation</button>
-        <button id="animSetActive">Set Active</button>
-      </span>
-      <button id="addFrame">Add Frame</button>
-      <button id="dupFrame">Duplicate</button>
-      <button id="delFrame" style="background:#ff6b6b;color:white;border:1px solid #e63946">🗑️ Delete Frame</button>
-      <label>Duration ms <input id="dur" type="number" min="10" step="10" value="300" /></label>
-      <span class="range">
-        <label for="playSpeed">Speed</label>
-        <input id="playSpeed" type="range" min="10" max="200" value="100" />
-        <span id="speedLabel">100%</span>
-      </span>
-      <button id="play">Play</button>
-      <button id="stop">Stop</button>
-      <button id="save">Save</button>
-      <button id="export" style="background:#0b5;color:white;border:1px solid #0a4">📥 Export JS</button>
-      <span class="badge" id="sizeBadge"></span>
-      <a href="/view?scene=anim" target="_blank" style="margin-left:auto">Open viewer ▶</a>
-      <span class="range" style="margin-left:8px">
-        <label for="brushSize">Brush</label>
-        <input id="brushSize" type="range" min="1" max="8" value="1" />
-      </span>
-      <span class="seg">
-        <button id="brushCircle" class="active" type="button">Circle</button>
-        <button id="brushSquare" type="button">Square</button>
-        <button id="brushTriangle" type="button">Triangle</button>
-        <button id="brushCustom" type="button">Custom</button>
-      </span>
-      <select id="customBrushSel" style="min-width:120px;display:none">
-        <option value="">Select brush...</option>
-      </select>
-      <button id="saveSelection" style="display:none;background:#f90;color:white;border:1px solid #e80">💾 Save as Brush</button>
-      <span class="seg">
-        <button id="modePaint" class="active" type="button">Paint</button>
-        <button id="modeErase" type="button">Erase</button>
-        <button id="modeSelect" type="button">Select</button>
-      </span>
-      <div style="display:inline-flex; gap:6px; align-items:center; flex-wrap:wrap; padding:6px 8px; background:#efe; border-radius:8px; border:1px solid #cfc">
-        <strong style="font-size:12px">Onion</strong>
-        <label>Enable <input id="onionEnable" type="checkbox" /></label>
-        <label>Prev <input id="onionPrev" type="number" min="0" max="2" value="1" style="width:60px; padding:4px 6px" /></label>
-        <label>Next <input id="onionNext" type="number" min="0" max="2" value="0" style="width:60px; padding:4px 6px" /></label>
+    <h2 style="margin:0 0 16px">Animation Maker</h2>
+    
+    <!-- Top Controls -->
+    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px">
+      <!-- Animation Management -->
+      <div class="toolbar-section" style="flex:1; min-width:400px">
+        <h3>Animation</h3>
+        <select id="animSel" style="flex:1; min-width:140px"></select>
+        <input id="animName" placeholder="Animation name" style="padding:6px 8px; flex:1; min-width:140px" />
+        <button id="animNew">+ New</button>
+        <button id="animSaveAs">Save As</button>
+        <button id="save">💾 Save</button>
+        <button id="export" style="background:#0b5;color:white;border:1px solid #0a4">� Export</button>
+        <button id="animSetActive" style="background:#0af;color:white;border:1px solid #09e">✓ Set Active</button>
+        <button id="animDelete" style="background:#c92a2a;color:white;border:1px solid #a61e1e">🗑️ Delete</button>
       </div>
-      <div style="display:inline-flex; gap:6px; align-items:center; flex-wrap:wrap; padding:6px 8px; background:#eef; border-radius:8px; border:1px solid #cde">
-        <strong style="font-size:12px">Text feed (overlay)</strong>
-        <input id="textUrl" placeholder="https://... (text or JSON)" style="padding:4px 6px; width:260px" />
-        <label>Field <input id="textField" placeholder="message" style="padding:4px 6px; width:120px" /></label>
-        <label>Interval <input id="textInt" type="number" min="1000" step="500" value="30000" style="width:110px; padding:4px 6px" /></label>
-        <label>Enable <input id="textEnable" type="checkbox" /></label>
-        <button id="textSave">Save text</button>
+      
+      <!-- Playback Controls -->
+      <div class="toolbar-section">
+        <h3>Playback</h3>
+        <button id="play">▶ Play</button>
+        <button id="stop">■ Stop</button>
+        <span class="range">
+          <label for="playSpeed">Speed</label>
+          <input id="playSpeed" type="range" min="10" max="200" value="100" />
+          <span id="speedLabel" style="min-width:45px">100%</span>
+        </span>
+        <a href="/view?scene=anim" target="_blank" style="padding:6px 10px; background:#333; color:#fff; text-decoration:none; border-radius:4px">👁 Preview</a>
       </div>
     </div>
-    <div class="wrap">
-      <div id="grid" class="grid"></div>
-      <div style="flex:1; min-width:260px">
-        <div class="timeline" id="timeline"></div>
+
+    <!-- Main Layout -->
+    <div class="main-layout">
+      <!-- Left: Canvas and Timeline -->
+      <div class="canvas-area">
+        <!-- Drawing Tools -->
+        <div class="toolbar-section">
+          <h3>Drawing Tools</h3>
+          <span class="seg">
+            <button id="modePaint" class="active" type="button">✏️ Paint</button>
+            <button id="modeErase" type="button">🧹 Erase</button>
+            <button id="modeFill" type="button">🪣 Fill</button>
+            <button id="modeLine" type="button">📏 Line</button>
+            <button id="modeRect" type="button">▭ Rectangle</button>
+            <button id="modeCircle" type="button">⭕ Circle</button>
+            <button id="modeSelect" type="button">⬚ Select</button>
+          </span>
+          <span class="range" id="brushSizeControl">
+            <label for="brushSize">Size</label>
+            <input id="brushSize" type="range" min="1" max="8" value="1" />
+          </span>
+          <span class="seg" id="brushShapeControl">
+            <button id="brushCircle" class="active" type="button">⬤ Circle</button>
+            <button id="brushSquare" type="button">⬛ Square</button>
+            <button id="brushTriangle" type="button">▲ Triangle</button>
+            <button id="brushCustom" type="button">✨ Custom</button>
+          </span>
+          <label id="fillToggle" style="display:none">
+            <input id="fillShapes" type="checkbox" />
+            Fill shapes
+          </label>
+          <select id="customBrushSel" style="min-width:140px;display:none">
+            <option value="">Select custom brush...</option>
+          </select>
+          <button id="saveSelection" style="display:none;background:#f90;color:white;border:1px solid #e80">💾 Save Selection as Brush</button>
+          <button id="moveSelection" style="display:none;background:#09e;color:white;border:1px solid #07c">🔄 Move Mode</button>
+          <button id="clearSelectionBtn" style="display:none;background:#888;color:white;border:1px solid #666">✕ Clear Selection</button>
+        </div>
+
+        <!-- Canvas -->
+        <div style="display:flex; gap:12px; align-items:flex-start">
+          <div id="grid" class="grid"></div>
+          <span class="badge" id="sizeBadge" style="color:#666"></span>
+        </div>
+
+        <!-- Frame Controls -->
+        <div class="toolbar-section">
+          <h3>Frame Controls</h3>
+          <button id="addFrame">+ Add Frame</button>
+          <button id="dupFrame">📋 Duplicate</button>
+          <button id="delFrame" style="background:#ff6b6b;color:white;border:1px solid #e63946">🗑️ Delete</button>
+          <label style="display:inline-flex; gap:6px; align-items:center">
+            Duration (ms)
+            <input id="dur" type="number" min="10" step="10" value="300" style="width:80px; padding:4px 6px" />
+          </label>
+        </div>
+
+        <!-- Timeline -->
+        <div style="background:#fff; padding:12px; border-radius:8px; border:1px solid #ddd">
+          <h3 style="margin:0 0 8px; font-size:13px; font-weight:600; color:#333">Timeline</h3>
+          <div class="timeline" id="timeline"></div>
+        </div>
+
+        <!-- Advanced Options -->
+        <details style="background:#fff; padding:12px; border-radius:8px; border:1px solid #ddd">
+          <summary style="cursor:pointer; font-weight:600; color:#333; margin-bottom:8px">Advanced Options</summary>
+          <div style="display:flex; flex-direction:column; gap:12px; margin-top:12px">
+            <!-- Onion Skin -->
+            <div style="padding:8px; background:#efe; border-radius:6px; border:1px solid #cfc">
+              <strong style="font-size:12px; display:block; margin-bottom:6px">🧅 Onion Skinning</strong>
+              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+                <label style="display:inline-flex; gap:4px; align-items:center">
+                  <input id="onionEnable" type="checkbox" />
+                  Enable
+                </label>
+                <label style="display:inline-flex; gap:4px; align-items:center">
+                  Prev frames
+                  <input id="onionPrev" type="number" min="0" max="2" value="1" style="width:50px; padding:4px" />
+                </label>
+                <label style="display:inline-flex; gap:4px; align-items:center">
+                  Next frames
+                  <input id="onionNext" type="number" min="0" max="2" value="0" style="width:50px; padding:4px" />
+                </label>
+              </div>
+            </div>
+
+            <!-- Text Overlay -->
+            <div style="padding:8px; background:#eef; border-radius:6px; border:1px solid #cde">
+              <strong style="font-size:12px; display:block; margin-bottom:6px">📝 Text Overlay Feed</strong>
+              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+                <input id="textUrl" placeholder="https://... (text or JSON)" style="padding:4px 6px; flex:1; min-width:200px" />
+                <label style="display:inline-flex; gap:4px; align-items:center">
+                  Field
+                  <input id="textField" placeholder="message" style="padding:4px 6px; width:100px" />
+                </label>
+                <label style="display:inline-flex; gap:4px; align-items:center">
+                  Interval (ms)
+                  <input id="textInt" type="number" min="1000" step="500" value="30000" style="width:90px; padding:4px" />
+                </label>
+                <label style="display:inline-flex; gap:4px; align-items:center">
+                  <input id="textEnable" type="checkbox" />
+                  Enable
+                </label>
+                <button id="textSave">Save</button>
+              </div>
+            </div>
+          </div>
+        </details>
       </div>
-      <div id="animSidebar" style="min-width:220px; flex:0 0 220px; display:flex; flex-direction:column; gap:8px">
-        <div style="font-weight:600;color:#333">Animations</div>
-        <div id="animList" style="display:flex; flex-direction:column; gap:6px; max-height:60vh; overflow:auto"></div>
+
+      <!-- Right Sidebar: Animation List -->
+      <div class="sidebar">
+        <div style="background:#fff; padding:12px; border-radius:8px; border:1px solid #ddd; height:100%">
+          <h3 style="margin:0 0 12px; font-size:14px; font-weight:600; color:#333">📁 Your Animations</h3>
+          <div id="animList" style="display:flex; flex-direction:column; gap:6px; max-height:calc(100vh - 200px); overflow:auto"></div>
+        </div>
       </div>
     </div>
+    
     <script>
       let W = 84, H = 28;
       async function getLiveSize(){ try{ const r = await fetch('/frame.bits'); const j = await r.json(); if (j && j.w && j.h){ W=j.w; H=j.h; } }catch{} }
@@ -486,13 +572,23 @@ function createHandler() {
       const brushSizeEl = document.getElementById('brushSize');
       const modePaintBtn = document.getElementById('modePaint');
       const modeEraseBtn = document.getElementById('modeErase');
+      const modeFillBtn = document.getElementById('modeFill');
+      const modeLineBtn = document.getElementById('modeLine');
+      const modeRectBtn = document.getElementById('modeRect');
+      const modeCircleBtn = document.getElementById('modeCircle');
       const brushCircleBtn = document.getElementById('brushCircle');
       const brushSquareBtn = document.getElementById('brushSquare');
       const brushTriangleBtn = document.getElementById('brushTriangle');
       const brushCustomBtn = document.getElementById('brushCustom');
       const customBrushSel = document.getElementById('customBrushSel');
       const saveSelectionBtn = document.getElementById('saveSelection');
+      const moveSelectionBtn = document.getElementById('moveSelection');
+      const clearSelectionBtn = document.getElementById('clearSelectionBtn');
       const modeSelectBtn = document.getElementById('modeSelect');
+      const fillToggle = document.getElementById('fillToggle');
+      const fillShapesEl = document.getElementById('fillShapes');
+      const brushSizeControl = document.getElementById('brushSizeControl');
+      const brushShapeControl = document.getElementById('brushShapeControl');
       const playSpeedEl = document.getElementById('playSpeed');
       const speedLabelEl = document.getElementById('speedLabel');
       const animListEl = document.getElementById('animList');
@@ -512,7 +608,7 @@ function createHandler() {
       let playSpeed = 100; // percentage
       let isMouseDown = false;
       let brushSize = 1; // radius in pixels
-      let brushMode = 'paint'; // 'paint' | 'erase' | 'select'
+      let brushMode = 'paint'; // 'paint' | 'erase' | 'select' | 'fill' | 'line' | 'rect' | 'circle'
       let brushShape = 'circle'; // 'circle' | 'square' | 'triangle' | 'custom'
       let currentName = '';
       let textMeta = { enable:false, url:'', field:'', intervalMs:30000 };
@@ -521,8 +617,12 @@ function createHandler() {
       let onionNext = 0;
       let customBrushes = {}; // { name: { w, h, pattern: [] } }
       let currentCustomBrush = null;
-      let selection = { active: false, startX: 0, startY: 0, endX: 0, endY: 0 };
+      let selection = { active: false, startX: 0, startY: 0, endX: 0, endY: 0, copied: null, moving: false };
       let selectionBox = null;
+      let lineStart = null;
+      let shapeStart = null;
+      let tempOverlay = null;
+      let fillShapes = false;
       function bitsOf(arr){ return arr.map(v=>v?'1':'0').join(''); }
       function arrOf(bits){ const arr = new Array(W*H).fill(false); for(let i=0;i<arr.length && i<bits.length;i++){ arr[i] = bits.charAt(i)==='1'; } return arr; }
       function applyBrushAt(index){
@@ -579,6 +679,160 @@ function createHandler() {
           }
         }
       }
+      
+      // Flood fill algorithm
+      function floodFill(startX, startY) {
+        const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+        const startIdx = startY * W + startX;
+        const targetColor = arr[startIdx];
+        const fillColor = !targetColor; // Fill with opposite color (toggle)
+        
+        const stack = [[startX, startY]];
+        const visited = new Set();
+        
+        while (stack.length > 0) {
+          const [x, y] = stack.pop();
+          const key = y * W + x;
+          
+          if (x < 0 || y < 0 || x >= W || y >= H) continue;
+          if (visited.has(key)) continue;
+          if (arr[key] !== targetColor) continue;
+          
+          visited.add(key);
+          arr[key] = fillColor;
+          const el = grid.children[key];
+          if (el) el.classList.toggle('on', fillColor);
+          
+          stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+        }
+      }
+      
+      // Draw line using Bresenham's algorithm
+      function drawLine(x0, y0, x1, y1, commit = true) {
+        const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+        const points = [];
+        const dx = Math.abs(x1 - x0);
+        const dy = Math.abs(y1 - y0);
+        const sx = x0 < x1 ? 1 : -1;
+        const sy = y0 < y1 ? 1 : -1;
+        let err = dx - dy;
+        
+        let x = x0, y = y0;
+        while (true) {
+          if (x >= 0 && y >= 0 && x < W && y < H) {
+            points.push([x, y]);
+            if (commit) {
+              const idx = y * W + x;
+              arr[idx] = brushMode !== 'erase';
+              const el = grid.children[idx];
+              if (el) el.classList.toggle('on', arr[idx]);
+            } else {
+              // Preview mode - add dotted class
+              const idx = y * W + x;
+              const el = grid.children[idx];
+              if (el) el.classList.add('preview');
+            }
+          }
+          
+          if (x === x1 && y === y1) break;
+          const e2 = 2 * err;
+          if (e2 > -dy) { err -= dy; x += sx; }
+          if (e2 < dx) { err += dx; y += sy; }
+        }
+        return points;
+      }
+      
+      // Draw rectangle
+      function drawRect(x0, y0, x1, y1, filled, commit = true) {
+        const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+        const minX = Math.max(0, Math.min(x0, x1));
+        const maxX = Math.min(W - 1, Math.max(x0, x1));
+        const minY = Math.max(0, Math.min(y0, y1));
+        const maxY = Math.min(H - 1, Math.max(y0, y1));
+        const points = [];
+        
+        for (let y = minY; y <= maxY; y++) {
+          for (let x = minX; x <= maxX; x++) {
+            const isEdge = x === minX || x === maxX || y === minY || y === maxY;
+            if (filled || isEdge) {
+              points.push([x, y]);
+              if (commit) {
+                const idx = y * W + x;
+                arr[idx] = brushMode !== 'erase';
+                const el = grid.children[idx];
+                if (el) el.classList.toggle('on', arr[idx]);
+              } else {
+                // Preview mode - add dotted class
+                const idx = y * W + x;
+                const el = grid.children[idx];
+                if (el) el.classList.add('preview');
+              }
+            }
+          }
+        }
+        return points;
+      }
+      
+      // Draw circle using midpoint circle algorithm
+      function drawCircle(cx, cy, radius, filled, commit = true) {
+        const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+        const points = [];
+        
+        function plotPoint(x, y) {
+          if (x >= 0 && y >= 0 && x < W && y < H) {
+            points.push([x, y]);
+            if (commit) {
+              const idx = y * W + x;
+              arr[idx] = brushMode !== 'erase';
+              const el = grid.children[idx];
+              if (el) el.classList.toggle('on', arr[idx]);
+            } else {
+              // Preview mode - add dotted class
+              const idx = y * W + x;
+              const el = grid.children[idx];
+              if (el) el.classList.add('preview');
+            }
+          }
+        }
+        
+        if (filled) {
+          for (let y = -radius; y <= radius; y++) {
+            for (let x = -radius; x <= radius; x++) {
+              if (x * x + y * y <= radius * radius) {
+                plotPoint(cx + x, cy + y);
+              }
+            }
+          }
+        } else {
+          let x = 0, y = radius;
+          let d = 1 - radius;
+          
+          const drawOctants = (px, py) => {
+            plotPoint(cx + px, cy + py);
+            plotPoint(cx - px, cy + py);
+            plotPoint(cx + px, cy - py);
+            plotPoint(cx - px, cy - py);
+            plotPoint(cx + py, cy + px);
+            plotPoint(cx - py, cy + px);
+            plotPoint(cx + py, cy - px);
+            plotPoint(cx - py, cy - px);
+          };
+          
+          drawOctants(x, y);
+          while (x < y) {
+            x++;
+            if (d < 0) {
+              d += 2 * x + 1;
+            } else {
+              y--;
+              d += 2 * (x - y) + 1;
+            }
+            drawOctants(x, y);
+          }
+        }
+        return points;
+      }
+      
       function renderGrid(){
         grid.style.gridTemplateColumns = 'repeat(' + W + ',12px)';
         grid.style.position = 'relative';
@@ -618,16 +872,37 @@ function createHandler() {
           isMouseDown = true;
           const i = getCellFromPosition(e.clientX, e.clientY);
           if (i < 0) return;
+          const x = i % W;
+          const y = Math.floor(i / W);
           
           if (brushMode === 'select') {
-            const x = i % W;
-            const y = Math.floor(i / W);
+            if (selection.moving && selection.copied) {
+              // Check if clicking inside selection to start drag
+              const minX = Math.min(selection.startX, selection.endX);
+              const maxX = Math.max(selection.startX, selection.endX);
+              const minY = Math.min(selection.startY, selection.endY);
+              const maxY = Math.max(selection.startY, selection.endY);
+              if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
+                selection.dragOffsetX = x - minX;
+                selection.dragOffsetY = y - minY;
+                selection.dragging = true;
+                return;
+              }
+            }
             selection.active = true;
             selection.startX = x;
             selection.startY = y;
             selection.endX = x;
             selection.endY = y;
+            selection.moving = false;
+            selection.dragging = false;
             createSelectionBox();
+          } else if (brushMode === 'fill') {
+            floodFill(x, y);
+          } else if (brushMode === 'line') {
+            lineStart = { x, y };
+          } else if (brushMode === 'rect' || brushMode === 'circle') {
+            shapeStart = { x, y };
           } else {
             applyBrushAt(i);
           }
@@ -637,14 +912,65 @@ function createHandler() {
           if (!isMouseDown) return;
           const i = getCellFromPosition(e.clientX, e.clientY);
           if (i < 0) return;
+          const x = i % W;
+          const y = Math.floor(i / W);
           
           if (brushMode === 'select') {
-            const x = i % W;
-            const y = Math.floor(i / W);
-            selection.endX = x;
-            selection.endY = y;
-            updateSelectionBox();
-          } else {
+            if (selection.dragging && selection.copied) {
+              // Store original frame state on first drag
+              if (!tempOverlay) {
+                storeTempOverlay();
+              }
+              
+              // Clear to original state
+              clearTempOverlay();
+              
+              // Calculate new position
+              const newMinX = x - selection.dragOffsetX;
+              const newMinY = y - selection.dragOffsetY;
+              const w = selection.copied.w;
+              const h = selection.copied.h;
+              
+              // Draw preview at new position
+              const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+              for (let py = 0; py < h; py++) {
+                for (let px = 0; px < w; px++) {
+                  const destX = newMinX + px;
+                  const destY = newMinY + py;
+                  if (destX >= 0 && destY >= 0 && destX < W && destY < H) {
+                    const srcIdx = py * w + px;
+                    const destIdx = destY * W + destX;
+                    arr[destIdx] = selection.copied.pattern[srcIdx];
+                    const el = grid.children[destIdx];
+                    if (el) el.classList.toggle('on', arr[destIdx]);
+                  }
+                }
+              }
+              
+              selection.startX = newMinX;
+              selection.startY = newMinY;
+              selection.endX = newMinX + w - 1;
+              selection.endY = newMinY + h - 1;
+              updateSelectionBox();
+            } else {
+              selection.endX = x;
+              selection.endY = y;
+              updateSelectionBox();
+            }
+          } else if (brushMode === 'line' && lineStart) {
+            if (!tempOverlay) storeTempOverlay(); // Store once at start
+            clearTempOverlay(); // Clear previous preview
+            drawLine(lineStart.x, lineStart.y, x, y, false); // Draw new preview
+          } else if (brushMode === 'rect' && shapeStart) {
+            if (!tempOverlay) storeTempOverlay(); // Store once at start
+            clearTempOverlay(); // Clear previous preview
+            drawRect(shapeStart.x, shapeStart.y, x, y, fillShapes, false); // Draw new preview
+          } else if (brushMode === 'circle' && shapeStart) {
+            if (!tempOverlay) storeTempOverlay(); // Store once at start
+            clearTempOverlay(); // Clear previous preview
+            const radius = Math.round(Math.sqrt(Math.pow(x - shapeStart.x, 2) + Math.pow(y - shapeStart.y, 2)));
+            drawCircle(shapeStart.x, shapeStart.y, radius, fillShapes, false); // Draw new preview
+          } else if (brushMode === 'paint' || brushMode === 'erase') {
             applyBrushAt(i);
           }
         };
@@ -692,6 +1018,9 @@ function createHandler() {
       }
       function clearSelection(){
         selection.active = false;
+        selection.moving = false;
+        selection.dragging = false;
+        selection.copied = null;
         if (selectionBox && selectionBox.parentNode) {
           selectionBox.parentNode.removeChild(selectionBox);
           selectionBox = null;
@@ -699,7 +1028,79 @@ function createHandler() {
         for (let i=0;i<grid.children.length;i++){
           grid.children[i].classList.remove('selecting');
         }
+        saveSelectionBtn.style.display = 'none';
+        moveSelectionBtn.style.display = 'none';
+        clearSelectionBtn.style.display = 'none';
       }
+      
+      function copySelection() {
+        if (!selection.active) return;
+        const minX = Math.min(selection.startX, selection.endX);
+        const maxX = Math.max(selection.startX, selection.endX);
+        const minY = Math.min(selection.startY, selection.endY);
+        const maxY = Math.max(selection.startY, selection.endY);
+        const w = maxX - minX + 1;
+        const h = maxY - minY + 1;
+        const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+        const pattern = [];
+        for (let y = minY; y <= maxY; y++) {
+          for (let x = minX; x <= maxX; x++) {
+            pattern.push(arr[y * W + x]);
+          }
+        }
+        selection.copied = { w, h, pattern };
+      }
+      
+      function pasteSelection() {
+        if (!selection.copied || !selection.active) return;
+        const minX = Math.min(selection.startX, selection.endX);
+        const minY = Math.min(selection.startY, selection.endY);
+        const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+        const { w, h, pattern } = selection.copied;
+        
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const destX = minX + x;
+            const destY = minY + y;
+            if (destX >= 0 && destY >= 0 && destX < W && destY < H) {
+              const srcIdx = y * w + x;
+              const destIdx = destY * W + destX;
+              arr[destIdx] = pattern[srcIdx];
+              const el = grid.children[destIdx];
+              if (el) el.classList.toggle('on', arr[destIdx]);
+            }
+          }
+        }
+      }
+      
+      function clearTempOverlay() {
+        if (!tempOverlay) return;
+        const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+        // Remove preview class from all cells
+        for (let i = 0; i < grid.children.length; i++) {
+          const el = grid.children[i];
+          if (el) el.classList.remove('preview');
+        }
+        // Restore original values
+        tempOverlay.forEach(([x, y, oldVal]) => {
+          const idx = y * W + x;
+          arr[idx] = oldVal;
+          const el = grid.children[idx];
+          if (el) el.classList.toggle('on', oldVal);
+        });
+        tempOverlay = null;
+      }
+      
+      function storeTempOverlay() {
+        const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+        tempOverlay = [];
+        for (let i = 0; i < arr.length; i++) {
+          const x = i % W;
+          const y = Math.floor(i / W);
+          tempOverlay.push([x, y, arr[i]]);
+        }
+      }
+      
       function saveSelectionAsBrush(){
         if (!selection.active) return;
         const minX = Math.min(selection.startX, selection.endX);
@@ -815,35 +1216,71 @@ function createHandler() {
         speedLabelEl.textContent = playSpeed + '%';
       };
       
+      // Fill shapes toggle
+      fillShapesEl.onchange = ()=>{ fillShapes = fillShapesEl.checked; };
+      
+      // Helper to update UI based on mode
+      function updateModeUI() {
+        // Hide/show controls based on mode
+        const showBrushSize = ['paint', 'erase'].includes(brushMode);
+        const showBrushShape = ['paint', 'erase'].includes(brushMode);
+        const showFillToggle = ['rect', 'circle'].includes(brushMode);
+        
+        brushSizeControl.style.display = showBrushSize ? 'inline-flex' : 'none';
+        brushShapeControl.style.display = showBrushShape ? 'inline-flex' : 'none';
+        fillToggle.style.display = showFillToggle ? 'inline-flex' : 'none';
+        customBrushSel.style.display = (brushShape === 'custom' && showBrushShape) ? 'inline-block' : 'none';
+        updateGridCursor();
+      }
+      
       // Mode buttons
       modePaintBtn.onclick = ()=>{ 
         brushMode = 'paint'; 
         modePaintBtn.classList.add('active'); 
-        modeEraseBtn.classList.remove('active'); 
-        modeSelectBtn.classList.remove('active');
+        [modeEraseBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
         clearSelection();
-        saveSelectionBtn.style.display = 'none';
-        customBrushSel.style.display = brushShape === 'custom' ? 'inline-block' : 'none';
-        updateGridCursor();
+        updateModeUI();
       };
       modeEraseBtn.onclick = ()=>{ 
         brushMode = 'erase'; 
         modeEraseBtn.classList.add('active'); 
-        modePaintBtn.classList.remove('active'); 
-        modeSelectBtn.classList.remove('active');
+        [modePaintBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
         clearSelection();
-        saveSelectionBtn.style.display = 'none';
-        customBrushSel.style.display = brushShape === 'custom' ? 'inline-block' : 'none';
-        updateGridCursor();
+        updateModeUI();
+      };
+      modeFillBtn.onclick = ()=>{ 
+        brushMode = 'fill'; 
+        modeFillBtn.classList.add('active'); 
+        [modePaintBtn, modeEraseBtn, modeLineBtn, modeRectBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
+        clearSelection();
+        updateModeUI();
+      };
+      modeLineBtn.onclick = ()=>{ 
+        brushMode = 'line'; 
+        modeLineBtn.classList.add('active'); 
+        [modePaintBtn, modeEraseBtn, modeFillBtn, modeRectBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
+        clearSelection();
+        updateModeUI();
+      };
+      modeRectBtn.onclick = ()=>{ 
+        brushMode = 'rect'; 
+        modeRectBtn.classList.add('active'); 
+        [modePaintBtn, modeEraseBtn, modeFillBtn, modeLineBtn, modeCircleBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
+        clearSelection();
+        updateModeUI();
+      };
+      modeCircleBtn.onclick = ()=>{ 
+        brushMode = 'circle'; 
+        modeCircleBtn.classList.add('active'); 
+        [modePaintBtn, modeEraseBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeSelectBtn].forEach(b => b.classList.remove('active'));
+        clearSelection();
+        updateModeUI();
       };
       modeSelectBtn.onclick = ()=>{ 
         brushMode = 'select'; 
         modeSelectBtn.classList.add('active'); 
-        modePaintBtn.classList.remove('active'); 
-        modeEraseBtn.classList.remove('active');
-        saveSelectionBtn.style.display = 'inline-block';
-        customBrushSel.style.display = 'none';
-        updateGridCursor();
+        [modePaintBtn, modeEraseBtn, modeFillBtn, modeLineBtn, modeRectBtn, modeCircleBtn].forEach(b => b.classList.remove('active'));
+        updateModeUI();
       };
       
       function updateGridCursor() {
@@ -902,14 +1339,102 @@ function createHandler() {
       // Save selection as brush
       saveSelectionBtn.onclick = ()=>{ saveSelectionAsBrush(); };
       
+      // Move selection
+      moveSelectionBtn.onclick = ()=>{ 
+        copySelection();
+        // Clear the original area (cut, not copy)
+        if (selection.active) {
+          const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+          const minX = Math.min(selection.startX, selection.endX);
+          const maxX = Math.max(selection.startX, selection.endX);
+          const minY = Math.min(selection.startY, selection.endY);
+          const maxY = Math.max(selection.startY, selection.endY);
+          for (let y = minY; y <= maxY; y++) {
+            for (let x = minX; x <= maxX; x++) {
+              const idx = y * W + x;
+              arr[idx] = false;
+              const el = grid.children[idx];
+              if (el) el.classList.toggle('on', false);
+            }
+          }
+        }
+        selection.moving = true;
+        moveSelectionBtn.textContent = selection.moving ? '✓ Moving' : '🔄 Move Mode';
+      };
+      
+      // Clear selection
+      clearSelectionBtn.onclick = ()=>{ clearSelection(); };
+      
       // Mouse up handler
-      document.addEventListener('mouseup', ()=>{ 
+      document.addEventListener('mouseup', (e)=>{ 
+        if (!isMouseDown) return;
         isMouseDown = false; 
+        
+        // Finalize line drawing
+        if (brushMode === 'line' && lineStart) {
+          clearTempOverlay();
+          tempOverlay = null; // Reset
+          const i = getCellFromMouseEvent(e);
+          if (i >= 0) {
+            const x = i % W;
+            const y = Math.floor(i / W);
+            drawLine(lineStart.x, lineStart.y, x, y, true); // Commit the line
+          }
+          lineStart = null;
+        }
+        
+        // Finalize shape drawing
+        if (brushMode === 'rect' && shapeStart) {
+          clearTempOverlay();
+          tempOverlay = null; // Reset
+          const i = getCellFromMouseEvent(e);
+          if (i >= 0) {
+            const x = i % W;
+            const y = Math.floor(i / W);
+            drawRect(shapeStart.x, shapeStart.y, x, y, fillShapes, true); // Commit the rect
+          }
+          shapeStart = null;
+        }
+        
+        if (brushMode === 'circle' && shapeStart) {
+          clearTempOverlay();
+          tempOverlay = null; // Reset
+          const i = getCellFromMouseEvent(e);
+          if (i >= 0) {
+            const x = i % W;
+            const y = Math.floor(i / W);
+            const radius = Math.round(Math.sqrt(Math.pow(x - shapeStart.x, 2) + Math.pow(y - shapeStart.y, 2)));
+            drawCircle(shapeStart.x, shapeStart.y, radius, fillShapes, true); // Commit the circle
+          }
+          shapeStart = null;
+        }
+        
         if (brushMode === 'select' && selection.active) {
-          // Selection complete - show save button
+          if (selection.dragging) {
+            // The selection is already at the new position from mousemove
+            // Just commit it by clearing temp overlay
+            tempOverlay = null; // Finalize the move
+            selection.dragging = false;
+          }
+          // Selection complete - show buttons
           saveSelectionBtn.style.display = 'inline-block';
+          moveSelectionBtn.style.display = 'inline-block';
+          clearSelectionBtn.style.display = 'inline-block';
         }
       });
+      
+      // Helper to get cell from mouse event
+      function getCellFromMouseEvent(e) {
+        const gridRect = grid.getBoundingClientRect();
+        const cellSize = 12;
+        const gap = 2;
+        const x = e.clientX - gridRect.left - 6;
+        const y = e.clientY - gridRect.top - 6;
+        const cellX = Math.floor(x / (cellSize + gap));
+        const cellY = Math.floor(y / (cellSize + gap));
+        if (cellX < 0 || cellY < 0 || cellX >= W || cellY >= H) return -1;
+        return cellY * W + cellX;
+      }
       
       // Animation management
       function createPreviewGrid(container, Wsrc, Hsrc){
