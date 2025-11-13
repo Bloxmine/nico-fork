@@ -415,6 +415,7 @@ function createHandler() {
         transform: rotate(15deg);
         box-shadow: 4px 4px 0 rgba(0,0,0,0.3);
         z-index: 100;
+        pointer-events: none;
       }
       
       .cell{ 
@@ -492,26 +493,27 @@ function createHandler() {
       <p class="text-xl mt-2 font-bold">Create Amazing Pixel Art Animations!</p>
       <details class="mt-4 text-left max-w-4xl mx-auto">
         <summary class="cursor-pointer font-bold text-lg text-blue-600 hover:text-blue-800">⌨️ Keyboard Shortcuts</summary>
-        <div class="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
-          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">Space</kbd> Play/Stop</div>
-          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">&lt;</kbd> or <kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">,</kbd> Previous Frame</div>
-          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">&gt;</kbd> or <kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">.</kbd> Next Frame</div>
-          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">I</kbd> Insert Frame</div>
-          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">D</kbd> Duplicate Frame</div>
-          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">Del</kbd> Delete Frame</div>
-          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">P</kbd> Paint Tool</div>
-          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">E</kbd> Erase Tool</div>
-          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">S</kbd> Spray Tool</div>
-          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">F</kbd> Fill Tool</div>
-          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">L</kbd> Line Tool</div>
-          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">R</kbd> Rectangle Tool</div>
-          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">C</kbd> Circle Tool</div>
-          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">V</kbd> Select Tool</div>
-          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">[</kbd> Smaller Brush</div>
-          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">]</kbd> Larger Brush</div>
-          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">Ctrl+Z</kbd> Undo</div>
-          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">Ctrl+Y</kbd> Redo</div>
-          <div><kbd class="bg-gray-200 px-2 py-1 rounded border border-gray-400 font-mono">Ctrl+S</kbd> Save</div>
+        <div class="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm p-4 rounded-lg border-4 border-black shadow-lg" style="background: #ffffff; color: #000000;">
+          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">Space</kbd> Play/Stop</div>
+          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">&lt;</kbd> or <kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">,</kbd> Previous Frame</div>
+          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">&gt;</kbd> or <kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">.</kbd> Next Frame</div>
+          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">I</kbd> Insert Frame</div>
+          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">D</kbd> Duplicate Frame</div>
+          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">Del</kbd> Delete Frame</div>
+          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">P</kbd> Paint Tool</div>
+          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">E</kbd> Erase Tool</div>
+          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">S</kbd> Spray Tool</div>
+          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">F</kbd> Fill Tool</div>
+          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">L</kbd> Line Tool</div>
+          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">R</kbd> Rectangle Tool</div>
+          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">C</kbd> Circle Tool</div>
+          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">V</kbd> Select Tool</div>
+          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">[</kbd> Smaller Brush</div>
+          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">]</kbd> Larger Brush</div>
+          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">O</kbd> Toggle Onion Skin</div>
+          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">Ctrl+Z</kbd> Undo</div>
+          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">Ctrl+Y</kbd> Redo</div>
+          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">Ctrl+S</kbd> Save</div>
         </div>
       </details>
     </div>
@@ -576,7 +578,7 @@ function createHandler() {
             <div class="border-l-2 border-black mx-2 h-6"></div>
             <label class="flex items-center gap-2">
               <input id="onionEnable" type="checkbox" />
-              <span class="font-bold">👻 ONION SKIN</span>
+              <span class="font-bold">👻 ONION SKIN <kbd class="text-xs opacity-70">(O)</kbd></span>
             </label>
             <label class="flex items-center gap-2">
               <span class="font-bold">PREV:</span>
@@ -603,7 +605,6 @@ function createHandler() {
         <div class="comic-panel p-6" style="min-height: 400px;">
           <div class="flex gap-4 items-center justify-center h-full">
             <div id="grid" class="grid"></div>
-            <span id="sizeBadge" class="font-bold text-2xl" style="font-family: 'Bangers', cursive;"></span>
           </div>
         </div>
 
@@ -648,7 +649,6 @@ function createHandler() {
       const grid = document.getElementById('grid');
       const tl = document.getElementById('timeline');
       const durEl = document.getElementById('dur');
-      const sizeBadge = document.getElementById('sizeBadge');
       const brushSizeEl = document.getElementById('brushSize');
       const modePaintBtn = document.getElementById('modePaint');
       const modeEraseBtn = document.getElementById('modeErase');
@@ -1234,7 +1234,6 @@ function createHandler() {
         };
         
         grid.appendChild(overlay);
-        sizeBadge.textContent = W + '×' + H;
         updateOnionSkins();
       }
       function createSelectionBox(){
@@ -1790,6 +1789,14 @@ function createHandler() {
           e.preventDefault();
           brushSize = Math.min(10, brushSize + 1);
           brushSizeEl.value = String(brushSize);
+        }
+        
+        // 'o' to toggle onion skin
+        if (e.key === 'o' && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          onionEnableEl.checked = !onionEnableEl.checked;
+          onionEnabled = onionEnableEl.checked;
+          updateOnionSkins();
         }
       });
       
