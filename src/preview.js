@@ -734,7 +734,6 @@ function createHandler() {
     </div>
     
     <script>
-      console.log('=== Animation Maker Script Loading ===');
       let W = 84, H = 28;
       async function getLiveSize(){ try{ const r = await fetch('/frame.bits'); const j = await r.json(); if (j && j.w && j.h){ W=j.w; H=j.h; } }catch{} }
       const grid = document.getElementById('grid');
@@ -802,10 +801,6 @@ function createHandler() {
       const importBrushCancel = document.getElementById('importBrushCancel');
       const importBrushError = document.getElementById('importBrushError');
       const importBrushSuccess = document.getElementById('importBrushSuccess');
-      
-      console.log('=== DOM Elements Retrieved ===');
-      console.log('grid:', grid);
-      console.log('brushCircleBtn:', brushCircleBtn);
       
       let frames = [];
       let idx = 0;
@@ -1906,8 +1901,12 @@ function createHandler() {
       };
       durEl.onchange = ()=>{ const v = Math.max(10, Number(durEl.value)||300); frames[idx].dur = v; renderTimeline(); };
       document.getElementById('save').onclick = ()=>{ const n = String(animSel.value||'').trim(); saveState(n||currentName); };
-      document.getElementById('export').onclick = ()=>{ 
+      document.getElementById('export').onclick = async ()=>{ 
         const n = String(animSel.value||'').trim() || currentName || 'animation';
+        // Save first to ensure data is on server
+        await saveState(n);
+        // Small delay to ensure save completes
+        await new Promise(resolve => setTimeout(resolve, 100));
         const url = '/anim/export?name=' + encodeURIComponent(n);
         const a = document.createElement('a');
         a.href = url;
@@ -2997,7 +2996,7 @@ function startPreviewServer(startPort = Number(process.env.PORT || 3000)) {
 			}
 		});
 		server.listen(port, () => {
-			console.log(`[preview] Listening on http://localhost:${port}`);
+			console.log(`[preview] Listening on http://localhost:${port}/anim`);
 		});
 		globalThis.__previewServer = server;
 	}
