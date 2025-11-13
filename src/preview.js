@@ -422,6 +422,7 @@ function createHandler() {
       <button id="play">Play</button>
       <button id="stop">Stop</button>
       <button id="save">Save</button>
+      <button id="export" style="background:#0b5;color:white;border:1px solid #0a4">📥 Export JS</button>
       <span class="badge" id="sizeBadge"></span>
       <a href="/view?scene=anim" target="_blank" style="margin-left:auto">Open viewer ▶</a>
       <span class="range" style="margin-left:8px">
@@ -593,6 +594,14 @@ function createHandler() {
       document.getElementById('delFrame').onclick = ()=>{ if (!frames.length) return; frames.splice(idx,1); if (!frames.length) frames.push({ dur:300, arr:new Array(W*H).fill(false) }); idx = Math.min(idx, frames.length-1); renderTimeline(); renderGrid(); };
       durEl.onchange = ()=>{ const v = Math.max(10, Number(durEl.value)||300); frames[idx].dur = v; renderTimeline(); };
       document.getElementById('save').onclick = ()=>{ const n = String(animSel.value||'').trim(); saveState(n||currentName); };
+      document.getElementById('export').onclick = ()=>{ 
+        const n = String(animSel.value||'').trim() || currentName || 'animation';
+        const url = '/anim/export?name=' + encodeURIComponent(n);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = n + '.js';
+        a.click();
+      };
       textSaveBtn.onclick = ()=>{ const n = String(animSel.value||'').trim(); saveState(n||currentName); };
       let playTimer = 0;
       document.getElementById('play').onclick = ()=>{ if (playing) return; playing = true; function step(){ if (!playing) return; idx = (idx + 1) % frames.length; durEl.value = String(frames[idx].dur); renderTimeline(); renderGrid(); playTimer = setTimeout(step, frames[idx].dur); } playTimer = setTimeout(step, frames[idx].dur); };
@@ -823,6 +832,55 @@ function createHandler() {
 				try{ const { name } = JSON.parse(body||'{}'); const n = String(name||'').trim(); if (!n || !store.items[n]) throw new Error('bad'); delete store.items[n]; const keys = Object.keys(store.items); if (!keys.length) store.items['default'] = { w:84, h:28, frames: [] }; if (store.active === n) store.active = keys[0] || 'default'; res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ ok:true, active: store.active })); }
 				catch { res.writeHead(400, { "Content-Type": "application/json" }); res.end(JSON.stringify({ ok:false })); }
 			});
+		} else if (parsed.pathname === "/anim/export" && req.method === 'GET') {
+			// Export animation in JavaScript object format
+			if (!globalThis.__anim_store) globalThis.__anim_store = { active: 'default', items: {} };
+			const store = globalThis.__anim_store;
+			const q = parsed.query || {};
+			const name = String(q.name || '').trim() || store.active || 'default';
+			const item = store.items[name];
+			if (!item || !Array.isArray(item.frames)) {
+				res.writeHead(404, { "Content-Type": "text/plain" });
+				res.end('Animation not found');
+				return;
+			}
+			
+			// Convert bits string to 2D array format
+			function bitsToArray(bits, width, height) {
+				const result = [];
+				for (let y = 0; y < height; y++) {
+					const row = [];
+					for (let x = 0; x < width; x++) {
+						const index = y * width + x;
+						row.push(bits.charAt(index) === '1' ? 1 : 0);
+					}
+					result.push(row);
+				}
+				return result;
+			}
+			
+			// Build the JavaScript object
+			let output = `const animation = {\n`;
+			item.frames.forEach((frame, index) => {
+				const frameNum = index + 1;
+				const array2D = bitsToArray(frame.bits, item.w, item.h);
+				output += `  "frame_${frameNum}": [\n`;
+				array2D.forEach((row, rowIdx) => {
+					output += `    [${row.join(',')}]`;
+					if (rowIdx < array2D.length - 1) output += ',';
+					output += '\n';
+				});
+				output += `  ]`;
+				if (index < item.frames.length - 1) output += ',';
+				output += '\n';
+			});
+			output += `};\n`;
+			
+			res.writeHead(200, { 
+				"Content-Type": "text/javascript",
+				"Content-Disposition": `attachment; filename="${name || 'animation'}.js"`
+			});
+			res.end(output);
 		} else if (parsed.pathname === "/ski") {
 			// return simple input state for runner
 			if (!globalThis.__ski_state) {
