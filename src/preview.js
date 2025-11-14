@@ -1804,8 +1804,8 @@ function createHandler() {
         
         function getCellFromPosition(clientX, clientY) {
           const rect = grid.getBoundingClientRect();
-          const x = clientX - rect.left - 6; // 6px padding
-          const y = clientY - rect.top - 6;
+          const x = clientX - rect.left - 8; // 8px padding
+          const y = clientY - rect.top - 8;
           const cellX = Math.floor(x / (cellSize + gap));
           const cellY = Math.floor(y / (cellSize + gap));
           if (cellX < 0 || cellY < 0 || cellX >= W || cellY >= H) return -1;
