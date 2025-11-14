@@ -384,8 +384,9 @@ function createHandler() {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>🎨 Animation Maker - Comic Style!</title>
+    <title>Animation Maker - Comic Style!</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:wght@400;700&display=swap');
       
@@ -485,18 +486,36 @@ function createHandler() {
       
       /* Icon button styles for toolbar */
       button.w-full.aspect-square { 
-        min-height: 48px; 
+        min-height: 36px;
+        min-width: 36px;
+        padding: 8px;
         display: flex; 
         align-items: center; 
         justify-content: center;
         border-radius: 8px;
         transition: all 0.2s;
       }
+      button.w-full.aspect-square i {
+        font-size: 1rem;
+      }
       button.w-full.aspect-square:hover { 
         transform: scale(1.1); 
       }
       button.w-full.aspect-square.active {
         animation: wiggle 1s ease;
+      }
+      
+      /* Brush shape button styles */
+      #brushShapeControl button {
+        padding: 8px 12px;
+        min-width: 44px;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #brushShapeControl button i {
+        font-size: 1.1rem;
       }
       
       /* Wiggle animation for tool selection */
@@ -523,11 +542,11 @@ function createHandler() {
   <body class="min-h-screen p-6">
     <div class="comic-panel mb-6 p-6 text-center">
       <h1 class="text-6xl text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 m-0 drop-shadow-lg" style="font-family: 'Bangers', cursive;">
-        🎨 FLIPDOT ANIMATION MAKER! 💥
+        <i class="fas fa-palette"></i> FLIPDOT ANIMATION MAKER! <i class="fas fa-bolt"></i>
       </h1>
       <p class="text-xl mt-2 font-bold">Create Amazing Pixel Art Animations!</p>
       <details class="mt-4 text-left max-w-4xl mx-auto">
-        <summary class="cursor-pointer font-bold text-lg text-blue-600 hover:text-blue-800">⌨️ Keyboard Shortcuts</summary>
+        <summary class="cursor-pointer font-bold text-lg text-blue-600 hover:text-blue-800"><i class="fas fa-keyboard"></i> Keyboard Shortcuts</summary>
         <div class="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm p-4 rounded-lg border-4 border-black shadow-lg" style="background: #ffffff; color: #000000;">
           <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">Space</kbd> Play/Stop</div>
           <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">&lt;</kbd> or <kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">,</kbd> Previous Frame</div>
@@ -565,10 +584,10 @@ function createHandler() {
         <input id="animName" placeholder="Animation name" class="flex-1 min-w-[200px]" />
         <button id="animNew" class="btn-primary">+ NEW</button>
         <button id="animSaveAs" class="btn-success">SAVE AS</button>
-        <button id="save" class="btn-success">💾 SAVE <kbd class="ml-1 text-xs opacity-70">(Ctrl+S)</kbd></button>
-        <button id="export" class="btn-warning">📦 EXPORT</button>
+        <button id="save" class="btn-success"><i class="fas fa-save"></i> SAVE <kbd class="ml-1 text-xs opacity-70">(Ctrl+S)</kbd></button>
+        <button id="export" class="btn-warning"><i class="fas fa-file-export"></i> EXPORT</button>
         <button id="animSetActive" class="btn-primary">✓ SET ACTIVE</button>
-        <button id="animDelete" class="btn-danger">🗑️ DELETE</button>
+        <button id="animDelete" class="btn-danger"><i class="fas fa-trash"></i> DELETE</button>
       </div>
     </div>
 
@@ -577,37 +596,37 @@ function createHandler() {
       <!-- Left Toolbar (Photoshop style) -->
       <div class="comic-panel p-3 flex flex-col gap-2" style="width: 60px;">
         <h3 class="text-sm font-bold text-center mb-2" style="writing-mode: vertical-rl; transform: rotate(180deg); font-family: 'Bangers', cursive;">TOOLS</h3>
-        <button id="modePaint" class="active w-full aspect-square text-2xl p-2 relative" title="Paint (P)">✏️<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">P</span></button>
-        <button id="modeErase" class="w-full aspect-square text-2xl p-2 relative" title="Erase (E)">🧹<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">E</span></button>
-        <button id="modeSpray" class="w-full aspect-square text-2xl p-2 relative" title="Spray (S)">💨<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">S</span></button>
-        <button id="modeFill" class="w-full aspect-square text-2xl p-2 relative" title="Fill (F)">🪣<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">F</span></button>
-        <button id="modeLine" class="w-full aspect-square text-2xl p-2 relative" title="Line (L)">📏<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">L</span></button>
-        <button id="modeRect" class="w-full aspect-square text-2xl p-2 relative" title="Rectangle (R)">🔳<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">R</span></button>
-        <button id="modeCircle" class="w-full aspect-square text-2xl p-2 relative" title="Circle (C)">⭕<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">C</span></button>
-        <button id="modeSelect" class="w-full aspect-square text-2xl p-2 relative" title="Select (V)">⬚<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">V</span></button>
-        <button id="modeDither" class="w-full aspect-square text-2xl p-2 relative" title="Dither Fill (T)">◧<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">T</span></button>
-        <button id="modeStamp" class="w-full aspect-square text-2xl p-2 relative" title="Stamp/Clone (K)">🖌️<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">K</span></button>
-        <button id="modeText" class="w-full aspect-square text-2xl p-2 relative" title="Text (X)">🔤<span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">X</span></button>
+        <button id="modePaint" class="active w-full aspect-square text-2xl p-2 relative" title="Paint (P)"><i class="fas fa-pen"></i><span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">P</span></button>
+        <button id="modeErase" class="w-full aspect-square text-2xl p-2 relative" title="Erase (E)"><i class="fas fa-eraser"></i><span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">E</span></button>
+        <button id="modeSpray" class="w-full aspect-square text-2xl p-2 relative" title="Spray (S)"><i class="fas fa-spray-can"></i><span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">S</span></button>
+        <button id="modeFill" class="w-full aspect-square text-2xl p-2 relative" title="Fill (F)"><i class="fas fa-fill-drip"></i><span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">F</span></button>
+        <button id="modeLine" class="w-full aspect-square text-2xl p-2 relative" title="Line (L)"><i class="fas fa-minus"></i><span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">L</span></button>
+        <button id="modeRect" class="w-full aspect-square text-2xl p-2 relative" title="Rectangle (R)"><i class="far fa-square"></i><span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">R</span></button>
+        <button id="modeCircle" class="w-full aspect-square text-2xl p-2 relative" title="Circle (C)"><i class="far fa-circle"></i><span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">C</span></button>
+        <button id="modeSelect" class="w-full aspect-square text-2xl p-2 relative" title="Select (V)"><i class="fas fa-object-group"></i><span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">V</span></button>
+        <button id="modeDither" class="w-full aspect-square text-2xl p-2 relative" title="Dither Fill (T)"><i class="fas fa-th"></i><span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">T</span></button>
+        <button id="modeStamp" class="w-full aspect-square text-2xl p-2 relative" title="Stamp/Clone (K)"><i class="fas fa-stamp"></i><span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">K</span></button>
+        <button id="modeText" class="w-full aspect-square text-2xl p-2 relative" title="Text (X)"><i class="fas fa-font"></i><span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">X</span></button>
         <div class="border-t-2 border-black my-2"></div>
-        <button id="undo" class="w-full aspect-square text-xl p-2" title="Undo (Ctrl+Z)">↶</button>
-        <button id="redo" class="w-full aspect-square text-xl p-2" title="Redo (Ctrl+Y)">↷</button>
+        <button id="undo" class="w-full aspect-square text-xl p-2" title="Undo (Ctrl+Z)"><i class="fas fa-undo"></i></button>
+        <button id="redo" class="w-full aspect-square text-xl p-2" title="Redo (Ctrl+Y)"><i class="fas fa-redo"></i></button>
       </div>
 
       <!-- Center: Canvas and Timeline -->
       <div class="flex-1 flex flex-col gap-6">
         <!-- Tool Options Bar -->
         <div class="comic-panel p-4 comic-burst">
-          <h3 class="text-2xl mb-3 text-red-700">⚙️ TOOL OPTIONS</h3>
+          <h3 class="text-2xl mb-3 text-red-700"><i class="fas fa-cog"></i> TOOL OPTIONS</h3>
           <div class="flex flex-wrap gap-3 items-center">
             <div id="brushSizeControl" class="flex items-center gap-2">
               <label class="font-bold">SIZE: <kbd class="text-xs opacity-70">[/]</kbd></label>
               <input id="brushSize" type="range" min="1" max="8" value="1" class="w-32" />
             </div>
             <div id="brushShapeControl" class="flex gap-2">
-              <button id="brushCircle" class="active text-xl">⏺️</button>
-              <button id="brushSquare" class="text-xl">⏹️</button>
-              <button id="brushTriangle" class="text-xl">🔼</button>
-              <button id="brushCustom" class="text-xl">⏏️</button>
+              <button id="brushCircle" class="active text-xl"><i class="fas fa-circle"></i></button>
+              <button id="brushSquare" class="text-xl"><i class="fas fa-square"></i></button>
+              <button id="brushTriangle" class="text-xl"><i class="fas fa-caret-up"></i></button>
+              <button id="brushCustom" class="text-xl"><i class="fas fa-shapes"></i></button>
             </div>
             <label id="fillToggle" style="display:none" class="flex items-center gap-2">
               <input id="fillShapes" type="checkbox" />
@@ -632,7 +651,7 @@ function createHandler() {
             <div class="border-l-2 border-black mx-2 h-6"></div>
             <label class="flex items-center gap-2">
               <input id="onionEnable" type="checkbox" />
-              <span class="font-bold">👻 ONION SKIN <kbd class="text-xs opacity-70">(O)</kbd></span>
+              <span class="font-bold">🧅 ONION SKIN <kbd class="text-xs opacity-70">(O)</kbd></span>
             </label>
             <label class="flex items-center gap-2">
               <span class="font-bold">PREV:</span>
@@ -645,28 +664,28 @@ function createHandler() {
             <select id="customBrushSel" class="min-w-[180px]" style="display:none">
               <option value="">Select brush...</option>
             </select>
-            <button id="importBrush" class="btn-success" style="display:none">📥 IMPORT BRUSH</button>
-            <button id="saveSelection" style="display:none" class="btn-warning">💾 SAVE BRUSH</button>
-            <button id="moveSelection" style="display:none" class="btn-primary">🔄 MOVE</button>
-            <button id="copySelection" style="display:none" class="btn-success">📋 COPY</button>
-            <button id="invertSelection" style="display:none" class="btn-purple">⚡ INVERT</button>
-            <button id="flipHSelection" style="display:none" class="btn-purple">↔️ FLIP H</button>
-            <button id="flipVSelection" style="display:none" class="btn-purple">↕️ FLIP V</button>
-            <button id="rotate90Selection" style="display:none" class="btn-purple">↻ ROTATE</button>
-            <button id="clearSelectionBtn" style="display:none">✕ CLEAR</button>
+            <button id="importBrush" class="btn-success" style="display:none"><i class="fas fa-file-import"></i> IMPORT BRUSH</button>
+            <button id="saveSelection" style="display:none" class="btn-warning"><i class="fas fa-save"></i> SAVE BRUSH</button>
+            <button id="moveSelection" style="display:none" class="btn-primary"><i class="fas fa-arrows-alt"></i> MOVE</button>
+            <button id="copySelection" style="display:none" class="btn-success"><i class="fas fa-copy"></i> COPY</button>
+            <button id="invertSelection" style="display:none" class="btn-purple"><i class="fas fa-exchange-alt"></i> INVERT</button>
+            <button id="flipHSelection" style="display:none" class="btn-purple"><i class="fas fa-arrows-alt-h"></i> FLIP H</button>
+            <button id="flipVSelection" style="display:none" class="btn-purple"><i class="fas fa-arrows-alt-v"></i> FLIP V</button>
+            <button id="rotate90Selection" style="display:none" class="btn-purple"><i class="fas fa-redo"></i> ROTATE</button>
+            <button id="clearSelectionBtn" style="display:none"><i class="fas fa-times"></i> CLEAR</button>
           </div>
           <!-- Dither/Stamp Controls -->
           <div id="ditherControls" style="display:none" class="flex flex-wrap gap-3 items-center mt-3 pt-3 border-t-2 border-black">
             <span class="font-bold text-red-700">PATTERN:</span>
-            <button id="ditherCheckerboard" class="btn-primary">◧ CHECKER</button>
-            <button id="ditherDots" class="btn-primary">⬝ DOTS</button>
-            <button id="ditherLines" class="btn-primary">☰ LINES</button>
-            <button id="ditherDiagonal" class="btn-primary">⧅ DIAGONAL</button>
+            <button id="ditherCheckerboard" class="btn-primary"><i class="fas fa-chess-board"></i> CHECKER</button>
+            <button id="ditherDots" class="btn-primary"><i class="fas fa-braille"></i> DOTS</button>
+            <button id="ditherLines" class="btn-primary"><i class="fas fa-bars"></i> LINES</button>
+            <button id="ditherDiagonal" class="btn-primary"><i class="fas fa-slash"></i> DIAGONAL</button>
           </div>
           <div id="stampControls" style="display:none" class="flex flex-wrap gap-3 items-center mt-3 pt-3 border-t-2 border-black">
             <span class="font-bold text-red-700">STAMP/CLONE:</span>
-            <button id="setStampSource" class="btn-success">📍 SET SOURCE</button>
-            <button id="clearStamp" class="btn-danger">✕ CLEAR</button>
+            <button id="setStampSource" class="btn-success"><i class="fas fa-map-pin"></i> SET SOURCE</button>
+            <button id="clearStamp" class="btn-danger"><i class="fas fa-times"></i> CLEAR</button>
             <span id="stampStatus" class="text-sm opacity-70"></span>
           </div>
           <div id="textControls" style="display:none" class="flex flex-wrap gap-3 items-center mt-3 pt-3 border-t-2 border-black">
@@ -687,13 +706,13 @@ function createHandler() {
 
         <!-- Frame Controls -->
         <div class="comic-panel p-6 comic-burst">
-          <h3 class="text-3xl mb-4 text-green-700">🎞️ FRAME CONTROLS & PLAYBACK</h3>
+          <h3 class="text-3xl mb-4 text-green-700"><i class="fas fa-film"></i> FRAME CONTROLS & PLAYBACK</h3>
           
           <!-- Frame Management -->
           <div class="flex flex-wrap gap-3 items-center mb-4">
             <button id="addFrame" class="btn-success">+ ADD FRAME <kbd class="ml-1 text-xs opacity-70">(I)</kbd></button>
-            <button id="dupFrame" class="btn-primary">📋 DUPLICATE <kbd class="ml-1 text-xs opacity-70">(D)</kbd></button>
-            <button id="delFrame" class="btn-danger">🗑️ DELETE <kbd class="ml-1 text-xs opacity-70">(Del)</kbd></button>
+            <button id="dupFrame" class="btn-primary"><i class="fas fa-copy"></i> DUPLICATE <kbd class="ml-1 text-xs opacity-70">(D)</kbd></button>
+            <button id="delFrame" class="btn-danger"><i class="fas fa-trash"></i> DELETE <kbd class="ml-1 text-xs opacity-70">(Del)</kbd></button>
             <div class="flex items-center gap-2">
               <label class="font-bold">DURATION:</label>
               <input id="dur" type="number" min="10" value="300" class="w-24" />
@@ -703,14 +722,14 @@ function createHandler() {
           
           <!-- Playback Controls -->
           <div class="flex flex-wrap gap-3 items-center mb-4 pb-4 border-b-4 border-black border-dashed">
-            <button id="play" class="btn-success">▶ PLAY <kbd class="ml-1 text-xs opacity-70">(Space)</kbd></button>
-            <button id="stop" class="btn-danger">■ STOP <kbd class="ml-1 text-xs opacity-70">(Space)</kbd></button>
+            <button id="play" class="btn-success"><i class="fas fa-play"></i> PLAY <kbd class="ml-1 text-xs opacity-70">(Space)</kbd></button>
+            <button id="stop" class="btn-danger"><i class="fas fa-stop"></i> STOP <kbd class="ml-1 text-xs opacity-70">(Space)</kbd></button>
             <div class="flex items-center gap-3">
               <label class="font-bold text-lg">SPEED:</label>
               <input id="playSpeed" type="range" min="10" max="200" value="100" class="w-40" />
               <span id="speedLabel" class="font-bold text-xl min-w-[60px]">100%</span>
             </div>
-            <a href="/view?scene=anim" target="_blank" class="btn-purple no-underline">👁 PREVIEW</a>
+            <a href="/view?scene=anim" target="_blank" class="btn-purple no-underline"><i class="fas fa-eye"></i> PREVIEW</a>
           </div>
           
           <!-- Timeline -->
@@ -723,7 +742,7 @@ function createHandler() {
     <!-- Import Brush Modal -->
     <div id="importBrushModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center;">
       <div class="comic-panel p-6" style="max-width:600px; width:90%; max-height:80vh; overflow:auto;">
-        <h2 class="text-3xl mb-4 text-purple-700" style="font-family: 'Bangers', cursive;">📥 IMPORT CUSTOM BRUSH</h2>
+        <h2 class="text-3xl mb-4 text-purple-700" style="font-family: 'Bangers', cursive;"><i class="fas fa-file-import"></i> IMPORT CUSTOM BRUSH</h2>
         <p class="mb-3 font-bold">Paste your brush code below (array format with name):</p>
         <p class="mb-3 text-sm opacity-70">Example: "pacman": [[1,1,1],[1,0,1],[1,1,1]]</p>
         <textarea id="brushCodeInput" class="w-full p-3 border-4 border-black font-mono text-sm" rows="12" placeholder='"mybrush": [
@@ -2188,7 +2207,7 @@ function createHandler() {
         // Copy the selection and enter move mode
         copySelection();
         selection.moving = true;
-        moveSelectionBtn.textContent = selection.moving ? '✓ Moving' : '🔄 Move';
+        moveSelectionBtn.innerHTML = selection.moving ? '✓ Moving' : '<i class="fas fa-arrows-alt"></i> MOVE';
       }
       
       function clearTempOverlay() {
@@ -2927,7 +2946,7 @@ function createHandler() {
         }
         
         selection.moving = true;
-        moveSelectionBtn.textContent = selection.moving ? '✓ Moving' : '🔄 Move Mode';
+        moveSelectionBtn.innerHTML = selection.moving ? '✓ Moving' : '<i class="fas fa-arrows-alt"></i> MOVE';
       };
       
       // Clear selection
