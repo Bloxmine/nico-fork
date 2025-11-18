@@ -1838,6 +1838,38 @@ function createHandler() {
                 selection.dragging = true;
                 saveUndoState(); // Save before starting to drag/move
                 return;
+              } else {
+                // Clicking outside selection while in move mode - place selection here
+                saveUndoState(); // Save before placing
+                const w = selection.copied.w;
+                const h = selection.copied.h;
+                
+                // Place selection at clicked position
+                const arr = frames[idx]?.arr || new Array(W*H).fill(false);
+                for (let py = 0; py < h; py++) {
+                  for (let px = 0; px < w; px++) {
+                    const destX = x + px;
+                    const destY = y + py;
+                    if (destX >= 0 && destY >= 0 && destX < W && destY < H) {
+                      const srcIdx = py * w + px;
+                      const destIdx = destY * W + destX;
+                      arr[destIdx] = selection.copied.pattern[srcIdx];
+                      const el = grid.children[destIdx];
+                      if (el) el.classList.toggle('on', arr[destIdx]);
+                    }
+                  }
+                }
+                
+                // Update selection bounds to new position
+                selection.startX = x;
+                selection.startY = y;
+                selection.endX = x + w - 1;
+                selection.endY = y + h - 1;
+                selection.moving = false;
+                tempOverlay = null;
+                moveSelectionBtn.innerHTML = '<i class="fas fa-arrows-alt"></i> MOVE';
+                updateSelectionBox();
+                return;
               }
             }
             selection.active = true;
@@ -1914,15 +1946,19 @@ function createHandler() {
               const w = selection.copied.w;
               const h = selection.copied.h;
               
-              // Clear entire canvas to blank
+              // Get the frame array
               const arr = frames[idx]?.arr || new Array(W*H).fill(false);
-              for (let i = 0; i < arr.length; i++) {
-                arr[i] = false;
-                const el = grid.children[i];
-                if (el) el.classList.toggle('on', false);
+              
+              // Restore the original "clean" frame state (without the selection)
+              if (tempOverlay) {
+                for (let item of tempOverlay) {
+                  const [tx, ty, val] = item;
+                  const ti = ty * W + tx;
+                  arr[ti] = val;
+                }
               }
               
-              // Draw selection at new position
+              // Now draw the selection at the new position on top of the clean state
               for (let py = 0; py < h; py++) {
                 for (let px = 0; px < w; px++) {
                   const destX = newMinX + px;
@@ -1931,10 +1967,14 @@ function createHandler() {
                     const srcIdx = py * w + px;
                     const destIdx = destY * W + destX;
                     arr[destIdx] = selection.copied.pattern[srcIdx];
-                    const el = grid.children[destIdx];
-                    if (el) el.classList.toggle('on', arr[destIdx]);
                   }
                 }
+              }
+              
+              // Update the visual display all at once
+              for (let i = 0; i < arr.length; i++) {
+                const el = grid.children[i];
+                if (el) el.classList.toggle('on', arr[i]);
               }
               
               selection.startX = newMinX;
@@ -2931,19 +2971,30 @@ function createHandler() {
       moveSelectionBtn.onclick = ()=>{ 
         if (!selection.active) return;
         
+        // Save undo state BEFORE making any changes
+        saveUndoState();
+        
         // First, copy the selection pattern
         copySelection();
         
-        // Store the current frame state before clearing (for undo if needed)
-        storeTempOverlay();
-        
-        // Clear the ENTIRE frame to blank
+        // Clear only the selected area
+        const minX = Math.min(selection.startX, selection.endX);
+        const maxX = Math.max(selection.startX, selection.endX);
+        const minY = Math.min(selection.startY, selection.endY);
+        const maxY = Math.max(selection.startY, selection.endY);
         const arr = frames[idx]?.arr || new Array(W*H).fill(false);
-        for (let i = 0; i < arr.length; i++) {
-          arr[i] = false;
-          const el = grid.children[i];
-          if (el) el.classList.toggle('on', false);
+        for (let y = minY; y <= maxY; y++) {
+          for (let x = minX; x <= maxX; x++) {
+            const i = y * W + x;
+            arr[i] = false;
+            const el = grid.children[i];
+            if (el) el.classList.toggle('on', false);
+          }
         }
+        
+        // NOW store the frame state (with the selection area cleared)
+        // This is the "clean" state we'll restore to during dragging
+        storeTempOverlay();
         
         selection.moving = true;
         moveSelectionBtn.innerHTML = selection.moving ? '✓ Moving' : '<i class="fas fa-arrows-alt"></i> MOVE';
