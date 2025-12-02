@@ -427,7 +427,7 @@ function createHandler() {
       
       .cell{ 
         width:12px; height:12px; background: #0a0a0a;
-        border-radius:2px; cursor:pointer; 
+        border-radius:50%; cursor:pointer; 
         transition: all 0.1s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         border: 1px solid #333;
       }

@@ -460,7 +460,9 @@ ticker.start(async ({ deltaTime, elapsedTime }) => {
 			drawY = Math.max(0, groundY + jumpOffset - 3);
 		}
 		ctx.fillStyle = '#fff';
-		ctx.fillRect(playerX - 2, drawY, 5, 5);
+		ctx.beginPath();
+		ctx.arc(playerX, drawY + 2.5, 2.5, 0, Math.PI * 2);
+		ctx.fill();
 		// Not started → hint; Stopped after fall → 'Game Over'
 		if (!started) {
 			ctx.font = `${Math.max(8, Math.floor(height * 0.18))}px PPNeueMontreal`;
