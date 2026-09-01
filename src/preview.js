@@ -384,381 +384,506 @@ function createHandler() {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Animation Maker - Comic Style!</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <title>Animation Maker</title>
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:wght@400;700&display=swap');
-      
-      body { 
-        font-family: 'Comic Neue', cursive, system-ui; 
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        background-attachment: fixed;
+      :root {
+        --bg: #efefef;
+        --panel: #ffffff;
+        --panel-alt: #f6f6f6;
+        --ink: #111111;
+        --muted: #5c5c5c;
+        --line: #1e1e1e;
+        --soft: #d9d9d9;
+        --track: #e4e4e4;
+        --active: #111111;
+        --active-text: #ffffff;
+      }
+
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+      }
+
+      h1, h2, h3, h4, p { margin-top: 0; }
+      h1, h2, h3 { font-weight: 700; }
+
+      .page {
+        max-width: 1500px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 2px solid var(--line);
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+
+      .panel.soft {
+        background: var(--panel-alt);
+      }
+
+      .title-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .title-row h1 {
+        font-size: clamp(28px, 4vw, 42px);
+        letter-spacing: 0.04em;
         margin: 0;
-        padding: 0;
       }
-      
-      h1, h2, h3 { font-family: 'Bangers', cursive; letter-spacing: 2px; }
-      
-      .comic-panel {
-        background: white;
-        border: 4px solid #000;
-        box-shadow: 8px 8px 0 rgba(0,0,0,0.3), inset 2px 2px 0 rgba(255,255,255,0.5);
+
+      .muted { color: var(--muted); }
+
+      details {
+        margin-top: 12px;
       }
-      
-      .grid{ 
-        display:grid; grid-auto-rows:12px; gap:2px; 
-        background: linear-gradient(45deg, #1a1a1a 0%, #2d2d2d 100%);
-        padding:8px; border: 4px solid #000;
-        box-shadow: 0 0 20px rgba(0,0,0,0.5), inset 0 0 10px rgba(255,255,255,0.1);
-        position: relative;
+
+      summary {
+        cursor: pointer;
+        font-weight: 700;
       }
-      
-      .grid::before {
-        content: 'POW!'; position: absolute; top: -30px; right: -20px;
-        background: #ffeb3b; color: #000;
-        font-family: 'Bangers', cursive; font-size: 24px;
-        padding: 5px 15px; border: 3px solid #000;
-        transform: rotate(15deg);
-        box-shadow: 4px 4px 0 rgba(0,0,0,0.3);
-        z-index: 100;
-        pointer-events: none;
+
+      .shortcut-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 8px 12px;
+        margin-top: 12px;
       }
-      
-      .cell{ 
-        width:12px; height:12px; background: #0a0a0a;
-        border-radius:50%; cursor:pointer; 
-        transition: all 0.1s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        border: 1px solid #333;
+
+      .shortcut-grid div {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 28px;
       }
-      .cell.on{ 
-        background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
-        box-shadow: 0 0 8px rgba(255,255,255,0.8), inset 0 0 4px rgba(0,0,0,0.2);
-        transform: scale(1.1); border: 1px solid #fff;
+
+      kbd {
+        display: inline-block;
+        padding: 2px 6px;
+        border: 1px solid var(--line);
+        background: #1f1f1f;
+        color: #fff;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        border-radius: 3px;
       }
-      .cell:hover { transform: scale(1.15); z-index: 10; }
-      .cell.preview{ outline: 3px dotted #00ffff; outline-offset:-2px; z-index:10; animation: pulse-preview 0.5s infinite; }
-      @keyframes pulse-preview { 0%, 100% { outline-color: #00ffff; } 50% { outline-color: #ff00ff; } }
-      .cell.prev:not(.on){ background: rgba(255, 100, 100, 0.3); }
-      .cell.next:not(.on){ background: rgba(100, 255, 100, 0.3); }
-      
-      .timeline{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:12px; }
-      .frameThumb{ display:grid; grid-template-columns: repeat(var(--w), 2px); grid-auto-rows:2px; gap:1px; padding:4px; background:#222; border:3px solid #000; cursor:pointer; transition: all 0.3s ease; box-shadow: 3px 3px 0 rgba(0,0,0,0.3); }
-      .frameThumb:hover { transform: scale(1.1) rotate(-2deg); }
-      .frameThumb .p{ width:2px; height:2px; background:#000; }
-      .frameThumb .p.on{ background:#fff; }
-      
-      /* Frame deletion animation */
-      .frameThumb.deleting { 
-        animation: frameDelete 0.5s ease-out forwards;
-        pointer-events: none;
+
+      .toolbar-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
       }
-      @keyframes frameDelete {
-        0% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(1.2) rotate(10deg); opacity: 0.5; }
-        100% { transform: scale(0) rotate(45deg); opacity: 0; }
+
+      select, input, textarea, button {
+        font: inherit;
       }
-      
-      button { font-family: 'Comic Neue', cursive; font-weight: bold; padding: 8px 16px; border: 3px solid #000; background: linear-gradient(180deg, #fff 0%, #e0e0e0 100%); color: #000; cursor: pointer; transition: all 0.1s; box-shadow: 4px 4px 0 rgba(0,0,0,0.3); text-transform: uppercase; font-size: 12px; }
-      button:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 rgba(0,0,0,0.3); }
-      button:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 rgba(0,0,0,0.3); }
-      button.active { background: linear-gradient(180deg, #ffeb3b 0%, #fbc02d 100%); box-shadow: 4px 4px 0 rgba(0,0,0,0.3), inset 0 0 10px rgba(255,255,255,0.5); }
-      button:disabled { opacity: 0.5; cursor: not-allowed; }
-      
-      .btn-primary { background: linear-gradient(180deg, #4fc3f7 0%, #039be5 100%) !important; color: white !important; }
-      .btn-success { background: linear-gradient(180deg, #81c784 0%, #43a047 100%) !important; color: white !important; }
-      .btn-danger { background: linear-gradient(180deg, #e57373 0%, #d32f2f 100%) !important; color: white !important; }
-      .btn-warning { background: linear-gradient(180deg, #ffb74d 0%, #f57c00 100%) !important; color: white !important; }
-      .btn-purple { background: linear-gradient(180deg, #ba68c8 0%, #8e24aa 100%) !important; color: white !important; }
-      
-      input[type=range] { -webkit-appearance: none; height: 8px; background: linear-gradient(90deg, #ff6b6b 0%, #4ecdc4 100%); border: 2px solid #000; border-radius: 10px; box-shadow: 2px 2px 0 rgba(0,0,0,0.2); }
-      input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background: #ffeb3b; border: 3px solid #000; border-radius: 50%; cursor: pointer; box-shadow: 2px 2px 0 rgba(0,0,0,0.3); }
-      input[type=range]::-moz-range-thumb { width: 20px; height: 20px; background: #ffeb3b; border: 3px solid #000; border-radius: 50%; cursor: pointer; box-shadow: 2px 2px 0 rgba(0,0,0,0.3); }
-      
-      input[type=text], input[type=number], select { font-family: 'Comic Neue', cursive; padding: 8px 12px; border: 3px solid #000; background: white; box-shadow: 3px 3px 0 rgba(0,0,0,0.2); font-weight: bold; }
-      input[type=text]:focus, input[type=number]:focus, select:focus { outline: none; box-shadow: 3px 3px 0 rgba(0,0,0,0.2), 0 0 0 3px #ffeb3b; }
-      input[type=checkbox] { width: 20px; height: 20px; cursor: pointer; }
-      
-      .selection-box{ position:absolute; border: 4px dashed #ff00ff; background:rgba(255,0,255,0.15); pointer-events:none; z-index:100; animation: march 0.5s linear infinite; }
-      @keyframes march { 0% { border-color: #ff00ff; } 50% { border-color: #00ffff; } 100% { border-color: #ff00ff; } }
-      
-      .comic-burst { background: radial-gradient(circle at 20% 50%, transparent 20%, rgba(255,235,59,0.1) 21%, rgba(255,235,59,0.1) 34%, transparent 35%), radial-gradient(circle at 60% 70%, transparent 20%, rgba(100,255,218,0.1) 21%, rgba(100,255,218,0.1) 34%, transparent 35%), radial-gradient(circle at 50% 50%, #fff 0%, #f0f0f0 100%); }
-      
-      /* Icon button styles for toolbar */
-      button.w-full.aspect-square { 
-        min-height: 36px;
-        min-width: 36px;
-        padding: 8px;
-        display: flex; 
-        align-items: center; 
-        justify-content: center;
-        border-radius: 8px;
-        transition: all 0.2s;
+
+      input[type="text"], input[type="number"], select, textarea {
+        border: 2px solid var(--line);
+        background: #fff;
+        padding: 8px 10px;
+        min-height: 38px;
       }
-      button.w-full.aspect-square i {
-        font-size: 1rem;
+
+      input[type="range"] {
+        accent-color: #111;
       }
-      button.w-full.aspect-square:hover { 
-        transform: scale(1.1); 
-      }
-      button.w-full.aspect-square.active {
-        animation: wiggle 1s ease;
-      }
-      
-      /* Brush shape button styles */
-      #brushShapeControl button {
+
+      button {
+        border: 2px solid var(--line);
+        background: #f3f3f3;
+        color: var(--ink);
         padding: 8px 12px;
-        min-width: 44px;
-        min-height: 44px;
+        font-weight: 700;
+        cursor: pointer;
+        min-height: 38px;
+      }
+
+      button:hover { filter: brightness(0.98); }
+      button:disabled { opacity: 0.55; cursor: not-allowed; }
+      button.primary { background: #111; color: #fff; }
+      button.success { background: #dfeee0; }
+      button.warning { background: #f5e5be; }
+      button.danger { background: #f3d5d5; }
+      button.purple { background: #e9def8; }
+      button.active {
+        background: #111;
+        color: #fff;
+      }
+
+      .app-shell {
+        display: grid;
+        grid-template-columns: 64px minmax(0, 1fr);
+        gap: 18px;
+      }
+
+      .toolrail {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding: 12px 8px;
+      }
+
+      .toolrail h3 {
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin: 0 0 8px;
+        text-align: center;
+      }
+
+      .tool-btn {
+        width: 42px;
+        height: 42px;
+        padding: 0;
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        position: relative;
+        font-size: 16px;
       }
-      #brushShapeControl button i {
-        font-size: 1.1rem;
+
+      .tool-btn .key {
+        position: absolute;
+        right: 2px;
+        bottom: 2px;
+        font-size: 9px;
+        background: #111;
+        color: #fff;
+        padding: 1px 3px;
+        border-radius: 2px;
       }
-      
-      /* Wiggle animation for tool selection */
-      @keyframes wiggle {
-        0%, 100% { transform: rotate(0deg); }
-        10% { transform: rotate(-10deg) scale(1.1); }
-        20% { transform: rotate(10deg) scale(1.1); }
-        30% { transform: rotate(-10deg) scale(1.1); }
-        40% { transform: rotate(10deg) scale(1.1); }
-        50% { transform: rotate(-5deg) scale(1.1); }
-        60% { transform: rotate(5deg) scale(1.1); }
-        70% { transform: rotate(-3deg) scale(1.1); }
-        80% { transform: rotate(3deg) scale(1.1); }
-        90% { transform: rotate(0deg) scale(1.1); }
+
+      .tool-btn.active {
+        background: #111;
+        color: #fff;
       }
-        z-index: 10;
+
+      .main-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
       }
-      button.w-full.aspect-square.active {
-        transform: scale(1.05);
-        box-shadow: 6px 6px 0 rgba(0,0,0,0.3), inset 0 0 15px rgba(255,235,59,0.6);
+
+      .options-wrap {
+        gap: 12px;
+      }
+
+      .canvas-shell {
+        position: relative;
+        min-height: 420px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #ebebeb;
+      }
+
+      .grid {
+        display: grid;
+        grid-auto-rows: 12px;
+        gap: 2px;
+        background: #1b1b1b;
+        padding: 8px;
+        border: 2px solid #111;
+        position: relative;
+      }
+
+      .cell {
+        width: 12px;
+        height: 12px;
+        background: #0d0d0d;
+        border: 1px solid #333;
+        border-radius: 50%;
+        cursor: pointer;
+        transition: transform 0.08s ease, background 0.08s ease;
+      }
+
+      .cell.on {
+        background: #ffffff;
+        box-shadow: inset 0 0 0 1px #d9d9d9;
+      }
+
+      .cell:hover { transform: scale(1.06); }
+      .cell.preview {
+        outline: 2px dotted #00a8ff;
+        outline-offset: -2px;
+      }
+      .cell.prev:not(.on) { background: rgba(255, 100, 100, 0.3); }
+      .cell.next:not(.on) { background: rgba(100, 255, 100, 0.3); }
+
+      .frame-indicator {
+        position: absolute;
+        right: 10px;
+        bottom: 10px;
+        background: #111;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 700;
+        padding: 4px 8px;
+      }
+
+      .timeline {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin-top: 12px;
+      }
+
+      .frameThumb {
+        display: grid;
+        grid-template-columns: repeat(var(--w), 2px);
+        grid-auto-rows: 2px;
+        gap: 1px;
+        background: #222;
+        border: 2px solid #111;
+        padding: 4px;
+        cursor: pointer;
+      }
+
+      .frameThumb .p { width: 2px; height: 2px; background: #000; }
+      .frameThumb .p.on { background: #fff; }
+
+      .frameThumb.deleting {
+        opacity: 0;
+        transform: scale(0.7);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+      }
+
+      .selection-box {
+        position: absolute;
+        border: 2px dashed #ff00ff;
+        background: rgba(255, 0, 255, 0.12);
+        pointer-events: none;
+        z-index: 20;
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 50;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .modal.open {
+        display: flex;
+      }
+
+      .modal-box {
+        width: min(700px, 100%);
+        background: #fff;
+        border: 2px solid #111;
+        padding: 20px;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 220px;
+        resize: vertical;
+      }
+
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .inline-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      @media (max-width: 980px) {
+        .app-shell { grid-template-columns: 1fr; }
+        .toolrail {
+          flex-direction: row;
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+        .toolrail h3 { width: 100%; }
       }
     </style>
   </head>
-  <body class="min-h-screen p-6">
-    <div class="comic-panel mb-6 p-6 text-center">
-      <h1 class="text-6xl text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 m-0 drop-shadow-lg" style="font-family: 'Bangers', cursive;">
-        <i class="fas fa-palette"></i> FLIPDOT ANIMATION MAKER! <i class="fas fa-bolt"></i>
-      </h1>
-      <p class="text-xl mt-2 font-bold">Create Amazing Pixel Art Animations!</p>
-      <details class="mt-4 text-left max-w-4xl mx-auto">
-        <summary class="cursor-pointer font-bold text-lg text-blue-600 hover:text-blue-800"><i class="fas fa-keyboard"></i> Keyboard Shortcuts</summary>
-        <div class="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm p-4 rounded-lg border-4 border-black shadow-lg" style="background: #ffffff; color: #000000;">
-          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">Space</kbd> Play/Stop</div>
-          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">&lt;</kbd> or <kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">,</kbd> Previous Frame</div>
-          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">&gt;</kbd> or <kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">.</kbd> Next Frame</div>
-          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">I</kbd> Insert Frame</div>
-          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">D</kbd> Duplicate Frame</div>
-          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">Del</kbd> Delete Frame</div>
-          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">P</kbd> Paint Tool</div>
-          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">E</kbd> Erase Tool</div>
-          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">S</kbd> Spray Tool</div>
-          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">F</kbd> Fill Tool</div>
-          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">L</kbd> Line Tool</div>
-          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">R</kbd> Rectangle Tool</div>
-          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">C</kbd> Circle Tool</div>
-          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">V</kbd> Select Tool</div>
-          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">T</kbd> Dither Tool</div>
-          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">K</kbd> Stamp Tool</div>
-          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">X</kbd> Text Tool</div>
-          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">M</kbd> Toggle Mirror</div>
-          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">[</kbd> Smaller Brush</div>
-          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">]</kbd> Larger Brush</div>
-          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">O</kbd> Toggle Onion Skin</div>
-          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">Ctrl+Z</kbd> Undo</div>
-          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">Ctrl+Y</kbd> Redo</div>
-          <div style="color: #000;"><kbd style="background: #1f2937; color: #fff;" class="px-2 py-1 rounded border border-gray-600 font-mono">Ctrl+S</kbd> Save</div>
+  <body>
+    <div class="page">
+      <div class="panel">
+        <div class="title-row">
+          <h1>Flipdot Animation Maker</h1>
         </div>
-      </details>
-    </div>
-    
-    <!-- Animation Management (Full Width) -->
-    <div class="comic-panel p-6 comic-burst mb-6">
-      <h3 class="text-3xl mb-4 text-purple-700">📼 ANIMATION</h3>
-      <div class="flex flex-wrap gap-3">
-        <select id="animSel" class="flex-1 min-w-[200px]"></select>
-        <input id="animName" placeholder="Animation name" class="flex-1 min-w-[200px]" />
-        <button id="animNew" class="btn-primary">+ NEW</button>
-        <button id="animSaveAs" class="btn-success">SAVE AS</button>
-        <button id="save" class="btn-success"><i class="fas fa-save"></i> SAVE <kbd class="ml-1 text-xs opacity-70">(Ctrl+S)</kbd></button>
-        <button id="export" class="btn-warning"><i class="fas fa-file-export"></i> EXPORT</button>
-        <button id="animSetActive" class="btn-primary">✓ SET ACTIVE</button>
-        <button id="animDelete" class="btn-danger"><i class="fas fa-trash"></i> DELETE</button>
-      </div>
-    </div>
-
-    <!-- Main Canvas Area with Photoshop-style sidebar -->
-    <div class="flex gap-6">
-      <!-- Left Toolbar (Photoshop style) -->
-      <div class="comic-panel p-3 flex flex-col gap-2" style="width: 60px;">
-        <h3 class="text-sm font-bold text-center mb-2" style="writing-mode: vertical-rl; transform: rotate(180deg); font-family: 'Bangers', cursive;">TOOLS</h3>
-        <button id="modePaint" class="active w-full aspect-square text-2xl p-2 relative" title="Paint (P)"><i class="fas fa-pen"></i><span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">P</span></button>
-        <button id="modeErase" class="w-full aspect-square text-2xl p-2 relative" title="Erase (E)"><i class="fas fa-eraser"></i><span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">E</span></button>
-        <button id="modeSpray" class="w-full aspect-square text-2xl p-2 relative" title="Spray (S)"><i class="fas fa-spray-can"></i><span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">S</span></button>
-        <button id="modeFill" class="w-full aspect-square text-2xl p-2 relative" title="Fill (F)"><i class="fas fa-fill-drip"></i><span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">F</span></button>
-        <button id="modeLine" class="w-full aspect-square text-2xl p-2 relative" title="Line (L)"><i class="fas fa-minus"></i><span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">L</span></button>
-        <button id="modeRect" class="w-full aspect-square text-2xl p-2 relative" title="Rectangle (R)"><i class="far fa-square"></i><span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">R</span></button>
-        <button id="modeCircle" class="w-full aspect-square text-2xl p-2 relative" title="Circle (C)"><i class="far fa-circle"></i><span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">C</span></button>
-        <button id="modeSelect" class="w-full aspect-square text-2xl p-2 relative" title="Select (V)"><i class="fas fa-object-group"></i><span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">V</span></button>
-        <button id="modeDither" class="w-full aspect-square text-2xl p-2 relative" title="Dither Fill (T)"><i class="fas fa-th"></i><span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">T</span></button>
-        <button id="modeStamp" class="w-full aspect-square text-2xl p-2 relative" title="Stamp/Clone (K)"><i class="fas fa-stamp"></i><span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">K</span></button>
-        <button id="modeText" class="w-full aspect-square text-2xl p-2 relative" title="Text (X)"><i class="fas fa-font"></i><span class="absolute bottom-0 right-0 text-xs bg-black text-white px-1 rounded" style="font-size: 8px;">X</span></button>
-        <div class="border-t-2 border-black my-2"></div>
-        <button id="undo" class="w-full aspect-square text-xl p-2" title="Undo (Ctrl+Z)"><i class="fas fa-undo"></i></button>
-        <button id="redo" class="w-full aspect-square text-xl p-2" title="Redo (Ctrl+Y)"><i class="fas fa-redo"></i></button>
+        <p class="muted">Simple frame-by-frame editor for pixel animations.</p>
+        <details>
+          <summary>Keyboard shortcuts</summary>
+          <div class="shortcut-grid">
+            <div><kbd>Space</kbd> Play/Stop</div>
+            <div><kbd>&lt;</kbd> / <kbd>,</kbd> Previous frame</div>
+            <div><kbd>&gt;</kbd> / <kbd>.</kbd> Next frame</div>
+            <div><kbd>I</kbd> Insert frame</div>
+            <div><kbd>D</kbd> Duplicate frame</div>
+            <div><kbd>Del</kbd> Delete frame</div>
+            <div><kbd>P</kbd> Paint</div>
+            <div><kbd>E</kbd> Erase</div>
+            <div><kbd>S</kbd> Spray</div>
+            <div><kbd>F</kbd> Fill</div>
+            <div><kbd>L</kbd> Line</div>
+            <div><kbd>R</kbd> Rectangle</div>
+            <div><kbd>C</kbd> Circle</div>
+            <div><kbd>V</kbd> Select</div>
+            <div><kbd>M</kbd> Mirror</div>
+            <div><kbd>O</kbd> Onion skin</div>
+            <div><kbd>Ctrl+Z</kbd> Undo</div>
+            <div><kbd>Ctrl+Y</kbd> Redo</div>
+            <div><kbd>Ctrl+S</kbd> Save</div>
+          </div>
+        </details>
       </div>
 
-      <!-- Center: Canvas and Timeline -->
-      <div class="flex-1 flex flex-col gap-6">
-        <!-- Tool Options Bar -->
-        <div class="comic-panel p-4 comic-burst">
-          <h3 class="text-2xl mb-3 text-red-700"><i class="fas fa-cog"></i> TOOL OPTIONS</h3>
-          <div class="flex flex-wrap gap-3 items-center">
-            <div id="brushSizeControl" class="flex items-center gap-2">
-              <label class="font-bold">SIZE: <kbd class="text-xs opacity-70">[/]</kbd></label>
-              <input id="brushSize" type="range" min="1" max="8" value="1" class="w-32" />
-            </div>
-            <div id="brushShapeControl" class="flex gap-2">
-              <button id="brushCircle" class="active text-xl"><i class="fas fa-circle"></i></button>
-              <button id="brushSquare" class="text-xl"><i class="fas fa-square"></i></button>
-              <button id="brushTriangle" class="text-xl"><i class="fas fa-caret-up"></i></button>
-              <button id="brushCustom" class="text-xl"><i class="fas fa-shapes"></i></button>
-            </div>
-            <label id="fillToggle" style="display:none" class="flex items-center gap-2">
-              <input id="fillShapes" type="checkbox" />
-              <span class="font-bold">FILL</span>
-            </label>
-            <label class="flex items-center gap-2">
-              <input id="pixelPerfect" type="checkbox" />
-              <span class="font-bold">PIXEL PERFECT</span>
-            </label>
-            <label class="flex items-center gap-2">
-              <input id="mirrorMode" type="checkbox" />
-              <span class="font-bold">🪞 MIRROR <kbd class="text-xs opacity-70">(M)</kbd></span>
-            </label>
-            <label id="mirrorAxisControl" style="display:none" class="flex items-center gap-2">
-              <span class="font-bold">AXIS:</span>
-              <select id="mirrorAxis" class="min-w-[100px]">
-                <option value="vertical">Vertical |</option>
-                <option value="horizontal">Horizontal —</option>
-                <option value="both">Both +</option>
-              </select>
-            </label>
-            <div class="border-l-2 border-black mx-2 h-6"></div>
-            <label class="flex items-center gap-2">
-              <input id="onionEnable" type="checkbox" />
-              <span class="font-bold">🧅 ONION SKIN <kbd class="text-xs opacity-70">(O)</kbd></span>
-            </label>
-            <label class="flex items-center gap-2">
-              <span class="font-bold">PREV:</span>
-              <input id="onionPrev" type="number" min="0" max="2" value="1" class="w-16" />
-            </label>
-            <label class="flex items-center gap-2">
-              <span class="font-bold">NEXT:</span>
-              <input id="onionNext" type="number" min="0" max="2" value="0" class="w-16" />
-            </label>
-            <select id="customBrushSel" class="min-w-[180px]" style="display:none">
-              <option value="">Select brush...</option>
-            </select>
-            <button id="importBrush" class="btn-success" style="display:none"><i class="fas fa-file-import"></i> IMPORT BRUSH</button>
-            <button id="saveSelection" style="display:none" class="btn-warning"><i class="fas fa-save"></i> SAVE BRUSH</button>
-            <button id="moveSelection" style="display:none" class="btn-primary"><i class="fas fa-arrows-alt"></i> MOVE</button>
-            <button id="copySelection" style="display:none" class="btn-success"><i class="fas fa-copy"></i> COPY</button>
-            <button id="invertSelection" style="display:none" class="btn-purple"><i class="fas fa-exchange-alt"></i> INVERT</button>
-            <button id="flipHSelection" style="display:none" class="btn-purple"><i class="fas fa-arrows-alt-h"></i> FLIP H</button>
-            <button id="flipVSelection" style="display:none" class="btn-purple"><i class="fas fa-arrows-alt-v"></i> FLIP V</button>
-            <button id="rotate90Selection" style="display:none" class="btn-purple"><i class="fas fa-redo"></i> ROTATE</button>
-            <button id="clearSelectionBtn" style="display:none"><i class="fas fa-times"></i> CLEAR</button>
-          </div>
-          <!-- Dither/Stamp Controls -->
-          <div id="ditherControls" style="display:none" class="flex flex-wrap gap-3 items-center mt-3 pt-3 border-t-2 border-black">
-            <span class="font-bold text-red-700">PATTERN:</span>
-            <button id="ditherCheckerboard" class="btn-primary"><i class="fas fa-chess-board"></i> CHECKER</button>
-            <button id="ditherDots" class="btn-primary"><i class="fas fa-braille"></i> DOTS</button>
-            <button id="ditherLines" class="btn-primary"><i class="fas fa-bars"></i> LINES</button>
-            <button id="ditherDiagonal" class="btn-primary"><i class="fas fa-slash"></i> DIAGONAL</button>
-          </div>
-          <div id="stampControls" style="display:none" class="flex flex-wrap gap-3 items-center mt-3 pt-3 border-t-2 border-black">
-            <span class="font-bold text-red-700">STAMP/CLONE:</span>
-            <button id="setStampSource" class="btn-success"><i class="fas fa-map-pin"></i> SET SOURCE</button>
-            <button id="clearStamp" class="btn-danger"><i class="fas fa-times"></i> CLEAR</button>
-            <span id="stampStatus" class="text-sm opacity-70"></span>
-          </div>
-          <div id="textControls" style="display:none" class="flex flex-wrap gap-3 items-center mt-3 pt-3 border-t-2 border-black">
-            <span class="font-bold text-red-700">TEXT:</span>
-            <input id="textInput" type="text" placeholder="Type text..." class="flex-1 min-w-[200px] px-3 py-2 border-4 border-black font-bold" maxlength="50" />
-            <span class="text-sm opacity-70">Click on canvas to place text</span>
-          </div>
+      <div class="panel soft">
+        <div class="toolbar-row">
+          <select id="animSel" style="flex:1; min-width:220px;"></select>
+          <input id="animName" type="text" placeholder="Animation name" style="flex:1; min-width:220px;" />
+          <button id="animNew" class="primary">+ NEW</button>
+          <button id="animSaveAs" class="success">SAVE AS</button>
+          <button id="save" class="success">SAVE</button>
+          <button id="export" class="warning">EXPORT</button>
+          <button id="animSetActive" class="primary">SET ACTIVE</button>
+          <button id="animDelete" class="danger">DELETE</button>
         </div>
+      </div>
 
-        <!-- Canvas -->
-        <div class="comic-panel p-6" style="min-height: 400px; position: relative;">
-          <div class="flex gap-4 items-center justify-center h-full">
+      <div class="app-shell">
+        <aside class="panel toolrail">
+          <h3>Tools</h3>
+          <button id="modePaint" class="tool-btn active" title="Paint (P)">✎<span class="key">P</span></button>
+          <button id="modeErase" class="tool-btn" title="Erase (E)">⌫<span class="key">E</span></button>
+          <button id="modeSpray" class="tool-btn" title="Spray (S)">⎚<span class="key">S</span></button>
+          <button id="modeFill" class="tool-btn" title="Fill (F)">▣<span class="key">F</span></button>
+          <button id="modeLine" class="tool-btn" title="Line (L)">—<span class="key">L</span></button>
+          <button id="modeRect" class="tool-btn" title="Rectangle (R)">▭<span class="key">R</span></button>
+          <button id="modeCircle" class="tool-btn" title="Circle (C)">◯<span class="key">C</span></button>
+          <button id="modeSelect" class="tool-btn" title="Select (V)">▢<span class="key">V</span></button>
+          <button id="modeDither" class="tool-btn" title="Dither (T)">◫<span class="key">T</span></button>
+          <button id="modeStamp" class="tool-btn" title="Stamp (K)">◍<span class="key">K</span></button>
+          <button id="modeText" class="tool-btn" title="Text (X)">T<span class="key">X</span></button>
+          <button id="undo" class="tool-btn" title="Undo">↶</button>
+          <button id="redo" class="tool-btn" title="Redo">↷</button>
+        </aside>
+
+        <main class="main-stack">
+          <div class="panel soft options-wrap">
+            <div class="toolbar-row">
+              <label class="inline-label">Size <input id="brushSize" type="range" min="1" max="8" value="1" /></label>
+              <div id="brushShapeControl" class="toolbar-row">
+                <button id="brushCircle" class="active">●</button>
+                <button id="brushSquare">■</button>
+                <button id="brushTriangle">▲</button>
+                <button id="brushCustom">✦</button>
+              </div>
+              <label id="fillToggle" class="inline-label" style="display:none;"><input id="fillShapes" type="checkbox" /> Fill</label>
+              <label class="inline-label"><input id="pixelPerfect" type="checkbox" /> Pixel perfect</label>
+              <label class="inline-label"><input id="mirrorMode" type="checkbox" /> Mirror</label>
+              <label id="mirrorAxisControl" class="inline-label" style="display:none;">Axis <select id="mirrorAxis"><option value="vertical">Vertical</option><option value="horizontal">Horizontal</option><option value="both">Both</option></select></label>
+            </div>
+
+            <div class="toolbar-row" style="margin-top: 12px;">
+              <label class="inline-label"><input id="onionEnable" type="checkbox" /> Onion skin</label>
+              <label class="inline-label">Prev <input id="onionPrev" type="number" min="0" max="2" value="1" style="width: 52px;" /></label>
+              <label class="inline-label">Next <input id="onionNext" type="number" min="0" max="2" value="0" style="width: 52px;" /></label>
+              <select id="customBrushSel" style="display:none; min-width: 180px;"><option value="">Select brush...</option></select>
+              <button id="importBrush" class="success" style="display:none;">Import brush</button>
+              <button id="saveSelection" class="warning" style="display:none;">Save brush</button>
+              <button id="moveSelection" class="primary" style="display:none;">Move</button>
+              <button id="copySelection" class="success" style="display:none;">Copy</button>
+              <button id="invertSelection" class="purple" style="display:none;">Invert</button>
+              <button id="flipHSelection" class="purple" style="display:none;">Flip H</button>
+              <button id="flipVSelection" class="purple" style="display:none;">Flip V</button>
+              <button id="rotate90Selection" class="purple" style="display:none;">Rotate</button>
+              <button id="clearSelectionBtn" style="display:none;">Clear</button>
+            </div>
+
+            <div id="ditherControls" class="toolbar-row" style="display:none; margin-top:12px;">
+              <span>Pattern</span>
+              <button id="ditherCheckerboard" class="primary">Checker</button>
+              <button id="ditherDots" class="primary">Dots</button>
+              <button id="ditherLines" class="primary">Lines</button>
+              <button id="ditherDiagonal" class="primary">Diagonal</button>
+            </div>
+
+            <div id="stampControls" class="toolbar-row" style="display:none; margin-top:12px;">
+              <span>Stamp</span>
+              <button id="setStampSource" class="success">Set source</button>
+              <button id="clearStamp" class="danger">Clear</button>
+              <span id="stampStatus" class="muted"></span>
+            </div>
+
+            <div id="textControls" class="toolbar-row" style="display:none; margin-top:12px;">
+              <span>Text</span>
+              <input id="textInput" type="text" placeholder="Type text..." style="flex:1; min-width:220px;" maxlength="50" />
+              <span class="muted">Click canvas to place it</span>
+            </div>
+          </div>
+
+          <div class="panel canvas-shell">
             <div id="grid" class="grid"></div>
+            <div id="currentFrameNum" class="frame-indicator"></div>
           </div>
-          <!-- Current frame number indicator -->
-          <div id="currentFrameNum" style="position:absolute; bottom:10px; right:10px; background:#000; color:#fff; font-size:16px; padding:4px 8px; border-radius:4px; font-weight:bold; font-family: 'Comic Neue', cursive; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>
-        </div>
 
-        <!-- Frame Controls -->
-        <div class="comic-panel p-6 comic-burst">
-          <h3 class="text-3xl mb-4 text-green-700"><i class="fas fa-film"></i> FRAME CONTROLS & PLAYBACK</h3>
-          
-          <!-- Frame Management -->
-          <div class="flex flex-wrap gap-3 items-center mb-4">
-            <button id="addFrame" class="btn-success">+ ADD FRAME <kbd class="ml-1 text-xs opacity-70">(I)</kbd></button>
-            <button id="dupFrame" class="btn-primary"><i class="fas fa-copy"></i> DUPLICATE <kbd class="ml-1 text-xs opacity-70">(D)</kbd></button>
-            <button id="delFrame" class="btn-danger"><i class="fas fa-trash"></i> DELETE <kbd class="ml-1 text-xs opacity-70">(Del)</kbd></button>
-            <div class="flex items-center gap-2">
-              <label class="font-bold">DURATION:</label>
-              <input id="dur" type="number" min="10" value="300" class="w-24" />
-              <span class="font-bold">ms</span>
+          <div class="panel soft">
+            <h3>Frame controls</h3>
+            <div class="toolbar-row">
+              <button id="addFrame" class="success">+ Add frame</button>
+              <button id="dupFrame" class="primary">Duplicate</button>
+              <button id="delFrame" class="danger">Delete</button>
+              <label class="inline-label">Duration <input id="dur" type="number" min="10" value="300" style="width: 90px;" /> ms</label>
             </div>
-          </div>
-          
-          <!-- Playback Controls -->
-          <div class="flex flex-wrap gap-3 items-center mb-4 pb-4 border-b-4 border-black border-dashed">
-            <button id="play" class="btn-success"><i class="fas fa-play"></i> PLAY <kbd class="ml-1 text-xs opacity-70">(Space)</kbd></button>
-            <button id="stop" class="btn-danger"><i class="fas fa-stop"></i> STOP <kbd class="ml-1 text-xs opacity-70">(Space)</kbd></button>
-            <div class="flex items-center gap-3">
-              <label class="font-bold text-lg">SPEED:</label>
-              <input id="playSpeed" type="range" min="10" max="200" value="100" class="w-40" />
-              <span id="speedLabel" class="font-bold text-xl min-w-[60px]">100%</span>
+
+            <div class="toolbar-row" style="margin-top: 16px;">
+              <button id="play" class="success">Play</button>
+              <button id="stop" class="danger">Stop</button>
+              <label class="inline-label">Speed <input id="playSpeed" type="range" min="10" max="200" value="100" /></label>
+              <span id="speedLabel" style="font-weight:700; min-width: 56px;">100%</span>
+              <a href="/view?scene=anim" target="_blank" style="text-decoration:none; color:inherit; display:inline-block; padding:8px 12px; border:2px solid #111; background:#e9def8; font-weight:700;">Preview</a>
             </div>
-            <a href="/view?scene=anim" target="_blank" class="btn-purple no-underline"><i class="fas fa-eye"></i> PREVIEW</a>
+
+            <div id="timeline" class="timeline"></div>
           </div>
-          
-          <!-- Timeline -->
-          <div id="timeline" class="timeline"></div>
-        </div>
+        </main>
       </div>
     </div>
-    </div>
-    
-    <!-- Import Brush Modal -->
-    <div id="importBrushModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center;">
-      <div class="comic-panel p-6" style="max-width:600px; width:90%; max-height:80vh; overflow:auto;">
-        <h2 class="text-3xl mb-4 text-purple-700" style="font-family: 'Bangers', cursive;"><i class="fas fa-file-import"></i> IMPORT CUSTOM BRUSH</h2>
-        <p class="mb-3 font-bold">Paste your brush code below (array format with name):</p>
-        <p class="mb-3 text-sm opacity-70">Example: "pacman": [[1,1,1],[1,0,1],[1,1,1]]</p>
-        <textarea id="brushCodeInput" class="w-full p-3 border-4 border-black font-mono text-sm" rows="12" placeholder='"mybrush": [
-  [1,1,1,0,0],
-  [1,0,1,0,0],
-  [1,1,1,0,0],
-],'></textarea>
-        <div class="flex gap-3 mt-4">
-          <button id="importBrushConfirm" class="btn-success flex-1">✓ IMPORT</button>
-          <button id="importBrushCancel" class="btn-danger flex-1">✕ CANCEL</button>
+
+    <div id="importBrushModal" class="modal">
+      <div class="modal-box">
+        <h2>Import custom brush</h2>
+        <p>Paste brush data below using array format.</p>
+        <textarea id="brushCodeInput" placeholder='"mybrush": [
+  [1,1,1],
+  [1,0,1],
+  [1,1,1]
+]'></textarea>
+        <div class="toolbar-row" style="margin-top: 12px;">
+          <button id="importBrushConfirm" class="success" style="flex:1;">Import</button>
+          <button id="importBrushCancel" class="danger" style="flex:1;">Cancel</button>
         </div>
-        <div id="importBrushError" class="mt-3 p-3 bg-red-200 border-2 border-red-600 rounded font-bold" style="display:none;"></div>
-        <div id="importBrushSuccess" class="mt-3 p-3 bg-green-200 border-2 border-green-600 rounded font-bold" style="display:none;"></div>
+        <div id="importBrushError" style="display:none; margin-top:12px; background:#f3d5d5; border:2px solid #b84343; padding:10px; font-weight:700;"></div>
+        <div id="importBrushSuccess" style="display:none; margin-top:12px; background:#dfeee0; border:2px solid #4a8b53; padding:10px; font-weight:700;"></div>
       </div>
     </div>
-    
+
     <script>
       const lettersBig = {
       "A": [
